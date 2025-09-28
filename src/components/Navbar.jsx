@@ -1,7 +1,10 @@
+// src/components/Navbar.jsx
+
 import React, { useState, useEffect } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { supabase } from "../lib/supabaseClient.js";
+import LogoImg from "../image/logo.png"; //
 
 const navItems = [
   { name: "Latihan Soal", to: "/latsol" },
@@ -65,10 +68,14 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="relative bg-white shadow-sm">
+    <nav className="relative bg-white shadow-sm sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between px-4 py-4">
-        <Link to="/" className="text-2xl font-bold text-gray-800">
-          matrohmatmath{" "}
+        <Link to="/">
+          <img
+            src={LogoImg}
+            alt="matrohmatmath Logo"
+            className="h-10 md:h-12 w-auto"
+          />
         </Link>
         <div className="md:hidden">
           <button onClick={toggleMenu} className="focus:outline-none">
