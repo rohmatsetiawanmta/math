@@ -1,7 +1,9 @@
+// src/pages/ProblemDetailPage.jsx
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient.js";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Bookmark, BookmarkCheck } from "lucide-react"; // DITAMBAHKAN: Bookmark icons
 import MathRenderer from "../components/MathRenderer.jsx";
 import TeoriBox from "../components/TeoriBox.jsx";
 import { toast } from "react-hot-toast";
@@ -96,6 +98,8 @@ const ProblemDetailPage = () => {
   const [userProgress, setUserProgress] = useState(null);
   // STATE untuk melacak jawaban yang terakhir diperiksa
   const [lastCheckedAnswer, setLastCheckedAnswer] = useState(null);
+  // STATE BARU: untuk melacak status bookmark
+  const [isBookmarked, setIsBookmarked] = useState(false);
 
   const { categoryId, topicId, subtopicId, problemId } = useParams();
   const navigate = useNavigate();
@@ -116,6 +120,24 @@ const ProblemDetailPage = () => {
     } else {
       // Default state jika belum pernah dicoba
       setUserProgress({ is_correct: false, attempts_count: 0 });
+    }
+  };
+
+  // FUNGSI BARU: untuk memuat status bookmark
+  const fetchBookmarkStatus = async (currentSession, currentProblemId) => {
+    if (!currentSession || !currentProblemId) return;
+
+    const { data, error } = await supabase
+      .from("user_bookmarks")
+      .select("id")
+      .eq("user_id", currentSession.user.id)
+      .eq("problem_id", currentProblemId)
+      .single();
+
+    if (!error && data) {
+      setIsBookmarked(true);
+    } else {
+      setIsBookmarked(false);
     }
   };
 
@@ -216,12 +238,14 @@ const ProblemDetailPage = () => {
     }
   }, [problem, userProgress]);
 
+  // UPDATE: Panggil fetch bookmark di sini
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       // Panggil fetch progress setelah session dan problem tersedia
       if (session && problem) {
         fetchUserProgress(session, problem.problem_id);
+        fetchBookmarkStatus(session, problem.problem_id); // PANGGIL FUNGSI BARU
       }
     });
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -229,16 +253,55 @@ const ProblemDetailPage = () => {
         setSession(session);
         if (session && problem) {
           fetchUserProgress(session, problem.problem_id);
+          fetchBookmarkStatus(session, problem.problem_id); // PANGGIL FUNGSI BARU
         }
       }
     );
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [problem]);
+  }, [problem]); // Dependensi problem penting agar dipanggil setelah data soal dimuat
 
   const handleBackToProblems = () => {
     navigate(`/latsol/${categoryId}/${topicId}/${subtopicId}`);
+  };
+
+  // FUNGSI BARU: untuk toggle bookmark
+  const handleToggleBookmark = async () => {
+    if (!session) {
+      toast.error("Anda harus login untuk membookmark soal.");
+      return;
+    }
+
+    if (isBookmarked) {
+      // Hapus bookmark
+      const { error } = await supabase
+        .from("user_bookmarks")
+        .delete()
+        .match({ user_id: session.user.id, problem_id: problem.problem_id });
+
+      if (error) {
+        console.error("Error removing bookmark:", error);
+        toast.error("Gagal menghapus bookmark.");
+      } else {
+        setIsBookmarked(false);
+        toast.success("Bookmark dihapus!");
+      }
+    } else {
+      // Tambah bookmark
+      const { error } = await supabase.from("user_bookmarks").insert({
+        user_id: session.user.id,
+        problem_id: problem.problem_id,
+      });
+
+      if (error) {
+        console.error("Error adding bookmark:", error);
+        toast.error("Gagal menambahkan bookmark.");
+      } else {
+        setIsBookmarked(true);
+        toast.success("Soal berhasil dibookmark!");
+      }
+    }
   };
 
   const handleCheckAnswer = async () => {
@@ -413,13 +476,35 @@ const ProblemDetailPage = () => {
 
       {/* Bagian Soal */}
       <div className="mt-6 rounded-lg bg-white p-6 shadow-md">
-        <div className="flex items-center gap-4 mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Soal</h2>
-          {problem.tag && (
-            <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-              {problem.tag}
-            </span>
+        {/* UPDATE: Container baru untuk tombol bookmark */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold text-gray-800">Soal</h2>
+            {problem.tag && (
+              <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                {problem.tag}
+              </span>
+            )}
+          </div>
+          {/* START: Tombol Bookmark BARU */}
+          {session && (
+            <button
+              onClick={handleToggleBookmark}
+              className={`p-2 rounded-full transition-colors ${
+                isBookmarked
+                  ? "bg-yellow-400 text-yellow-900 hover:bg-yellow-500"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+              title={isBookmarked ? "Hapus Bookmark" : "Bookmark Soal"}
+            >
+              {isBookmarked ? (
+                <BookmarkCheck size={20} />
+              ) : (
+                <Bookmark size={20} />
+              )}
+            </button>
           )}
+          {/* END: Tombol Bookmark BARU */}
         </div>
         <div className="prose max-w-none">
           <MathRenderer

@@ -3,19 +3,75 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { ChevronRight, CheckCircle, XCircle } from "lucide-react"; // <-- Import CheckCircle & XCircle
+import {
+  ChevronRight,
+  CheckCircle,
+  XCircle,
+  Bookmark,
+  BookmarkCheck,
+} from "lucide-react";
 import MathRenderer from "../components/MathRenderer";
 import formatTextForHTML from "../util/formatTextForHTML";
+import toast from "react-hot-toast";
 
 const ProblemListPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [session, setSession] = useState(null); // <-- State Sesi
-  const [progressMap, setProgressMap] = useState({}); // <-- State untuk map progress
+  const [session, setSession] = useState(null);
+  const [progressMap, setProgressMap] = useState({});
+  const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
 
   const { categoryId, topicId, subtopicId } = useParams();
   const navigate = useNavigate();
+
+  // FUNGSI BARU: Untuk toggle bookmark dari daftar
+  const handleToggleBookmark = async (problemId, isBookmarked, e) => {
+    e.preventDefault(); // Mencegah navigasi Link
+    e.stopPropagation(); // Mencegah bubble up
+
+    if (!session) {
+      toast.error("Anda harus login untuk membookmark soal.");
+      return;
+    }
+
+    const userId = session.user.id;
+    let error;
+
+    if (isBookmarked) {
+      // Hapus bookmark
+      ({ error } = await supabase
+        .from("user_bookmarks")
+        .delete()
+        .match({ user_id: userId, problem_id: problemId }));
+
+      if (!error) {
+        setBookmarkedIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(problemId);
+          return newSet;
+        });
+        toast.success("Bookmark dihapus!");
+      } else {
+        console.error("Error removing bookmark:", error);
+        toast.error("Gagal menghapus bookmark.");
+      }
+    } else {
+      // Tambah bookmark
+      ({ error } = await supabase.from("user_bookmarks").insert({
+        user_id: userId,
+        problem_id: problemId,
+      }));
+
+      if (!error) {
+        setBookmarkedIds((prev) => new Set(prev).add(problemId));
+        toast.success("Soal berhasil dibookmark!");
+      } else {
+        console.error("Error adding bookmark:", error);
+        toast.error("Gagal menambahkan bookmark.");
+      }
+    }
+  };
 
   // Fungsi fetch data utama (dimemoize dengan useCallback)
   const fetchProblemsAndProgress = useCallback(
@@ -49,13 +105,16 @@ const ProblemListPage = () => {
 
         setData(subtopicData);
 
-        // --- LOGIC: Fetch Progress ---
+        // --- LOGIC: Fetch Progress & Bookmarks ---
         if (currentSession && subtopicData.problems.length > 0) {
           const problemIds = subtopicData.problems.map((p) => p.problem_id);
+          const userId = currentSession.user.id;
+
+          // 1. Fetch Progress
           const { data: progressData, error: progressError } = await supabase
             .from("user_progress")
             .select("problem_id, is_correct")
-            .eq("user_id", currentSession.user.id)
+            .eq("user_id", userId)
             .in("problem_id", problemIds);
 
           if (!progressError && progressData) {
@@ -67,8 +126,24 @@ const ProblemListPage = () => {
           } else if (progressError) {
             console.error("Error fetching progress:", progressError);
           }
+
+          // 2. Fetch Bookmarks
+          const { data: bookmarkData, error: bookmarkError } = await supabase
+            .from("user_bookmarks")
+            .select("problem_id")
+            .eq("user_id", userId)
+            .in("problem_id", problemIds);
+
+          if (!bookmarkError && bookmarkData) {
+            const ids = new Set(bookmarkData.map((item) => item.problem_id));
+            setBookmarkedIds(ids);
+          } else if (bookmarkError) {
+            console.error("Error fetching bookmarks:", bookmarkError);
+            setBookmarkedIds(new Set());
+          }
         } else {
-          setProgressMap({}); // Reset progress jika tidak ada sesi
+          setProgressMap({});
+          setBookmarkedIds(new Set());
         }
         // --- END LOGIC ---
       } catch (error) {
@@ -107,7 +182,7 @@ const ProblemListPage = () => {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [fetchProblemsAndProgress]); // Tergantung pada fungsi fetchProblemsAndProgress
+  }, [fetchProblemsAndProgress]);
 
   const handleBackToSubtopic = () => {
     navigate(`/latsol/${categoryId}/${topicId}`);
@@ -177,61 +252,102 @@ const ProblemListPage = () => {
             const problemProgress = progressMap[problem.problem_id];
             const isCorrect = problemProgress === true;
             const isAttempted = problemProgress !== undefined;
+            // Status bookmark
+            const isBookmarked = bookmarkedIds.has(problem.problem_id);
 
             return (
-              <Link
+              <div
                 key={problem.id}
-                to={`/latsol/${categoryId}/${topicId}/${subtopicId}/${problem.problem_id}`}
-                className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
+                className="relative rounded-lg bg-white shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {/* Display solved status icon if user is logged in */}
-                    {session &&
-                      (isAttempted ? (
-                        isCorrect ? (
-                          <CheckCircle
-                            size={20}
-                            className="text-green-500"
-                            title="Benar"
-                          />
-                        ) : (
-                          <XCircle
-                            size={20}
-                            className="text-red-500"
-                            title="Salah"
-                          />
-                        )
-                      ) : (
-                        <div
-                          className="w-5 h-5 bg-gray-100 rounded-full border border-gray-300"
-                          title="Belum Dicoba"
-                        ></div>
-                      ))}
-
-                    {problem.tag && (
-                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                        {problem.tag}
+                {/* Link untuk navigasi */}
+                <Link
+                  to={`/latsol/${categoryId}/${topicId}/${subtopicId}/${problem.problem_id}`}
+                  className="block p-6 pr-16" // Tambahkan padding kanan untuk menghindari tumpang tindih
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      {/* Penomoran Soal */}
+                      <span className="text-lg font-semibold text-gray-700">
+                        Soal #{index + 1}
                       </span>
+
+                      {problem.tag && (
+                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                          {problem.tag}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-sm text-gray-500 prose max-w-none">
+                    {problem.question_text.length <= 200 ? (
+                      <MathRenderer
+                        text={formatTextForHTML(
+                          problem.question_text.substring(0, 200)
+                        )}
+                      />
+                    ) : (
+                      <MathRenderer
+                        text={formatTextForHTML(
+                          problem.question_text.substring(0, 200) + "..."
+                        )}
+                      />
                     )}
                   </div>
-                </div>
-                <div className="mt-2 text-sm text-gray-500 prose max-w-none">
-                  {problem.question_text.length <= 200 ? (
-                    <MathRenderer
-                      text={formatTextForHTML(
-                        problem.question_text.substring(0, 200)
+                </Link>
+
+                {/* CONTAINER STATUS & BOOKMARK (Absolute Positioned) */}
+                {session && (
+                  <div className="absolute top-4 right-4 flex items-center space-x-2 z-10">
+                    {/* Status Jawaban */}
+                    {isAttempted ? (
+                      isCorrect ? (
+                        <CheckCircle
+                          size={24}
+                          className="text-green-500"
+                          title="Benar"
+                        />
+                      ) : (
+                        <XCircle
+                          size={24}
+                          className="text-red-500"
+                          title="Salah"
+                        />
+                      )
+                    ) : (
+                      <div
+                        className="w-6 h-6 bg-gray-100 rounded-full border border-gray-300"
+                        title="Belum Dicoba"
+                      ></div>
+                    )}
+
+                    {/* Tombol Bookmark */}
+                    <button
+                      onClick={(e) =>
+                        handleToggleBookmark(
+                          problem.problem_id,
+                          isBookmarked,
+                          e
+                        )
+                      }
+                      className={`p-1 rounded-full transition-colors 
+                          ${
+                            isBookmarked
+                              ? "text-yellow-500 hover:text-yellow-600"
+                              : "text-gray-400 hover:text-gray-500"
+                          }
+                        `}
+                      title={isBookmarked ? "Hapus Bookmark" : "Bookmark Soal"}
+                    >
+                      {isBookmarked ? (
+                        <BookmarkCheck size={24} />
+                      ) : (
+                        <Bookmark size={24} />
                       )}
-                    />
-                  ) : (
-                    <MathRenderer
-                      text={formatTextForHTML(
-                        problem.question_text.substring(0, 200) + "..."
-                      )}
-                    />
-                  )}
-                </div>
-              </Link>
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })
         ) : (

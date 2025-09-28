@@ -107,6 +107,19 @@ const Navbar = () => {
 
           {session ? (
             <>
+              <NavLink
+                to="/bookmarks"
+                className={({ isActive }) =>
+                  `py-2 text-lg font-medium md:py-0 ${
+                    isActive
+                      ? "text-yellow-600 font-bold" // Ubah warna untuk menonjolkan bookmark
+                      : "text-gray-700 hover:text-yellow-600"
+                  }`
+                }
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Bookmark
+              </NavLink>
               {userRole === "admin" && (
                 <NavLink
                   to="/admin"

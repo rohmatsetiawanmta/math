@@ -15,6 +15,7 @@ import ComingSoon from "./pages/ComingSoon";
 import LoginPage from "./pages/LoginPage";
 import TheoryManagementPage from "./pages/admin/TheoryManagementPage.jsx";
 import UserManagementPage from "./pages/admin/UserManagementPage.jsx";
+import UserBookmarksPage from "./pages/UserBookmarkPage.jsx";
 
 const ProtectedRoute = ({ children, userRole, isLoading }) => {
   const navigate = useNavigate();
@@ -128,6 +129,8 @@ function App() {
         />
         <Route path="/materi" element={<ComingSoon />} />
         <Route path="/drill-soal" element={<ComingSoon />} />
+
+        <Route path="/bookmarks" element={<UserBookmarksPage />} />
 
         {/* Rute yang dilindungi untuk Admin */}
         <Route
