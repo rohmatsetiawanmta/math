@@ -102,7 +102,7 @@ const Navbar = () => {
             <>
               {userRole === "admin" && (
                 <NavLink
-                  to="/adminxyz"
+                  to="/admin"
                   className={({ isActive }) =>
                     `py-2 text-lg font-medium md:py-0 ${
                       isActive

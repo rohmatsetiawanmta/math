@@ -130,7 +130,7 @@ function App() {
 
         {/* Rute yang dilindungi untuk Admin */}
         <Route
-          path="/adminxyz/*"
+          path="/admin/*"
           element={
             <ProtectedRoute userRole={userRole} isLoading={isLoading}>
               <Routes>

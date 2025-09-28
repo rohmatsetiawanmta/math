@@ -12,7 +12,7 @@ const AdminPage = () => {
 
       <div className="space-y-4">
         <Link
-          to="/adminxyz/manage"
+          to="/admin/manage"
           className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
         >
           <h3 className="text-xl font-semibold text-gray-700">
@@ -23,7 +23,7 @@ const AdminPage = () => {
           </p>
         </Link>
         <Link
-          to="/adminxyz/problems"
+          to="/admin/problems"
           className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
         >
           <h3 className="text-xl font-semibold text-gray-700">
@@ -35,7 +35,7 @@ const AdminPage = () => {
         </Link>
         {/* Tambahkan link baru di sini */}
         <Link
-          to="/adminxyz/theories"
+          to="/admin/theories"
           className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
         >
           <h3 className="text-xl font-semibold text-gray-700">Kelola Teori</h3>

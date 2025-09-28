@@ -359,7 +359,7 @@ const HierarchyManager = () => {
       <Toaster />
       <div className="mb-6">
         <div className="flex items-center gap-2 text-gray-500">
-          <Link to="/adminxyz" className="text-gray-500 hover:text-gray-700">
+          <Link to="/admin" className="text-gray-500 hover:text-gray-700">
             Admin
           </Link>
           <ChevronRight size={16} />
