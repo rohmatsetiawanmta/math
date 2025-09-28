@@ -68,6 +68,20 @@ const renderSolutionWithTheories = (solutionText, theories) => {
   });
 };
 
+// Helper function untuk membandingkan jawaban
+const compareAnswers = (current, last) => {
+  if (current === null || last === null) return current === last;
+  if (typeof current === "string" && typeof last === "string") {
+    return current === last;
+  }
+  // Untuk tipe non-primitif (array/object), gunakan JSON.stringify
+  try {
+    return JSON.stringify(current) === JSON.stringify(last);
+  } catch (e) {
+    return false;
+  }
+};
+
 const ProblemDetailPage = () => {
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -77,8 +91,33 @@ const ProblemDetailPage = () => {
   const [feedback, setFeedback] = useState(null);
   const [session, setSession] = useState(null);
   const [theoriesWithOrder, setTheoriesWithOrder] = useState([]);
+
+  // STATE untuk melacak progress
+  const [userProgress, setUserProgress] = useState(null);
+  // STATE untuk melacak jawaban yang terakhir diperiksa
+  const [lastCheckedAnswer, setLastCheckedAnswer] = useState(null);
+
   const { categoryId, topicId, subtopicId, problemId } = useParams();
   const navigate = useNavigate();
+
+  // Fungsi untuk memuat progres pengguna
+  const fetchUserProgress = async (currentSession, currentProblemId) => {
+    if (!currentSession || !currentProblemId) return;
+
+    const { data, error } = await supabase
+      .from("user_progress")
+      .select("is_correct, attempts_count")
+      .eq("user_id", currentSession.user.id)
+      .eq("problem_id", currentProblemId)
+      .single();
+
+    if (data) {
+      setUserProgress(data);
+    } else {
+      // Default state jika belum pernah dicoba
+      setUserProgress({ is_correct: false, attempts_count: 0 });
+    }
+  };
 
   useEffect(() => {
     const fetchProblem = async () => {
@@ -152,6 +191,7 @@ const ProblemDetailPage = () => {
     fetchProblem();
   }, [problemId]);
 
+  // Efek untuk mengisi userAnswers dengan jawaban yang benar jika sudah solved (Req 2)
   useEffect(() => {
     if (problem) {
       if (problem.type === "input" || problem.type === "mcq") {
@@ -162,33 +202,72 @@ const ProblemDetailPage = () => {
         setUserAnswers([]);
       }
     }
-  }, [problem]);
+
+    // Override default state jika sudah benar
+    if (problem && userProgress && userProgress.is_correct) {
+      if (problem.type === "mcq" || problem.type === "input") {
+        setUserAnswers(problem.answer);
+      } else {
+        // Untuk MCMA dan MCK (object/array), lakukan deep copy
+        setUserAnswers(JSON.parse(JSON.stringify(problem.answer)));
+      }
+      // Set feedback agar section Jawaban Anda Benar muncul
+      setFeedback("correct");
+    }
+  }, [problem, userProgress]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      // Panggil fetch progress setelah session dan problem tersedia
+      if (session && problem) {
+        fetchUserProgress(session, problem.problem_id);
+      }
     });
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
+        if (session && problem) {
+          fetchUserProgress(session, problem.problem_id);
+        }
       }
     );
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [problem]);
 
   const handleBackToProblems = () => {
     navigate(`/latsol/${categoryId}/${topicId}/${subtopicId}`);
   };
 
-  const handleCheckAnswer = () => {
+  const handleCheckAnswer = async () => {
+    let isCorrect;
+
+    // 1. Kunci jika sudah benar
+    if (userProgress && userProgress.is_correct) {
+      return;
+    }
+
+    // --- LOGIKA Req 3: Cek apakah jawaban tidak berubah ---
+    let currentComparableAnswer;
+    if (problem.type === "mcma" || problem.type === "mck") {
+      currentComparableAnswer = JSON.stringify(userAnswers);
+    } else {
+      currentComparableAnswer = userAnswers;
+    }
+
+    if (compareAnswers(currentComparableAnswer, lastCheckedAnswer)) {
+      // Req 1: Hapus toast
+      setFeedback(userProgress?.is_correct ? "correct" : "incorrect");
+      return;
+    }
+    // --- AKHIR LOGIKA Req 3 ---
+
+    // 2. Logika penentuan isCorrect
     if (problem.type === "mck") {
       const problemAnswer = problem.answer;
-      const isCorrect =
-        JSON.stringify(userAnswers) === JSON.stringify(problemAnswer);
-
-      setFeedback(isCorrect ? "correct" : "incorrect");
+      isCorrect = compareAnswers(userAnswers, problemAnswer);
     } else if (problem.type === "mcma") {
       const sortedUserAnswers = Array.isArray(userAnswers)
         ? [...userAnswers].sort()
@@ -197,18 +276,55 @@ const ProblemDetailPage = () => {
         ? [...problem.answer].sort()
         : [];
 
-      const isCorrect =
+      isCorrect =
         sortedUserAnswers.length === sortedProblemAnswers.length &&
         sortedUserAnswers.every(
           (val, index) => val === sortedProblemAnswers[index]
         );
-
-      setFeedback(isCorrect ? "correct" : "incorrect");
     } else {
-      const isCorrect =
-        userAnswers.toLowerCase() === problem.answer.toLowerCase();
-      setFeedback(isCorrect ? "correct" : "incorrect");
+      isCorrect = userAnswers.toLowerCase() === problem.answer.toLowerCase();
     }
+
+    // 3. LOGIKA: Menyimpan Progress
+    let newAttemptsCount = (userProgress?.attempts_count || 0) + 1;
+    let newIsCorrect = isCorrect;
+
+    if (session) {
+      const { error: progressError } = await supabase
+        .from("user_progress")
+        .upsert(
+          {
+            user_id: session.user.id,
+            problem_id: problem.problem_id,
+            is_correct: newIsCorrect,
+            attempts_count: newAttemptsCount,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: ["user_id", "problem_id"] }
+        );
+
+      if (progressError) {
+        console.error("Error saving progress:", progressError);
+        toast.error("Gagal menyimpan progres jawaban.");
+      } else {
+        // Update local state setelah upsert sukses
+        setUserProgress({
+          is_correct: newIsCorrect,
+          attempts_count: newAttemptsCount,
+        });
+
+        // Update lastCheckedAnswer state (hanya jika berhasil disubmit)
+        setLastCheckedAnswer(currentComparableAnswer);
+
+        // Tampilkan toast hanya jika BENAR
+        if (newIsCorrect) {
+          toast.success(`Jawaban Benar!`);
+        }
+      }
+    }
+
+    // 4. Set visual feedback
+    setFeedback(isCorrect ? "correct" : "incorrect");
   };
 
   const handleToggleSolution = () => {
@@ -286,6 +402,11 @@ const ProblemDetailPage = () => {
     );
   }
 
+  const isSolvedCorrectly = userProgress?.is_correct;
+  const showFeedback = isSolvedCorrectly || feedback;
+  // Jawaban benar ditampilkan hanya jika isSolvedCorrectly adalah TRUE atau feedback adalah 'correct'
+  const shouldShowCorrectAnswer = isSolvedCorrectly || feedback === "correct";
+
   return (
     <div className="container mx-auto px-4 py-8">
       {breadcrumb}
@@ -340,6 +461,8 @@ const ProblemDetailPage = () => {
                         ? setUserAnswers(e.target.value)
                         : handleMcmaAnswerChange(e)
                     }
+                    // Nonaktifkan input jika soal sudah benar
+                    disabled={isSolvedCorrectly}
                     className={
                       problem.type === "mcq"
                         ? "h-5 w-5 text-blue-600"
@@ -363,6 +486,8 @@ const ProblemDetailPage = () => {
             type="text"
             value={userAnswers}
             onChange={(e) => setUserAnswers(e.target.value)}
+            // Nonaktifkan input jika soal sudah benar
+            disabled={isSolvedCorrectly}
             className="w-full rounded-md border p-3 focus:border-blue-500 focus:outline-none"
             placeholder="Ketik jawaban Anda di sini..."
           />
@@ -408,6 +533,8 @@ const ProblemDetailPage = () => {
                               [key]: e.target.value,
                             })
                           }
+                          // Nonaktifkan input jika soal sudah benar
+                          disabled={isSolvedCorrectly}
                           className="h-4 w-4 text-blue-600"
                         />
                       </td>
@@ -421,61 +548,78 @@ const ProblemDetailPage = () => {
       </div>
 
       <div className="mt-8 flex gap-4">
-        <button
-          onClick={handleCheckAnswer}
-          className="rounded-md bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600"
-          disabled={
-            !userAnswers ||
-            (problem.type === "mck" &&
-              Object.keys(userAnswers).length !==
-                Object.keys(problem.options).length) ||
-            (problem.type === "mcma" &&
-              (!Array.isArray(userAnswers) || userAnswers.length === 0))
-          }
-        >
-          Cek Jawaban
-        </button>
-        <button
-          onClick={handleToggleSolution}
-          className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-        >
-          {showSolution ? "Sembunyikan Pembahasan" : "Lihat Pembahasan"}
-        </button>
+        {/* Tombol Cek Jawaban (Hilang jika sudah benar) */}
+        {!isSolvedCorrectly && (
+          <button
+            onClick={handleCheckAnswer}
+            className="rounded-md bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:bg-gray-400"
+            disabled={
+              !userAnswers ||
+              (problem.type === "mck" &&
+                Object.keys(userAnswers).length !==
+                  Object.keys(problem.options).length) ||
+              (problem.type === "mcma" &&
+                (!Array.isArray(userAnswers) || userAnswers.length === 0))
+            }
+          >
+            Cek Jawaban
+          </button>
+        )}
       </div>
 
-      {feedback && (
+      {/* Feedback Section (Tampil jika sudah ada jawaban yang benar atau baru saja submit) */}
+      {showFeedback && (
         <div
           className={`mt-6 p-6 rounded-lg shadow-md border-l-4 ${
-            feedback === "correct"
+            shouldShowCorrectAnswer
               ? "border-green-500 bg-green-50"
               : "border-red-500 bg-red-50"
           }`}
         >
           <h3
             className={`mb-2 text-xl font-bold ${
-              feedback === "correct" ? "text-green-700" : "text-red-700"
+              shouldShowCorrectAnswer ? "text-green-700" : "text-red-700"
             }`}
           >
-            {feedback === "correct"
+            {shouldShowCorrectAnswer
               ? "Jawaban Anda Benar!"
               : "Jawaban Anda Salah"}
           </h3>
-          <p className="text-sm text-gray-600">Jawaban yang benar adalah:</p>
-          <div className="prose max-w-none text-gray-900 font-bold">
-            <MathRenderer
-              text={
-                problem.type === "mck"
-                  ? formatMckAnswer(problem.answer)
-                  : Array.isArray(problem.answer)
-                  ? problem.answer.join(", ")
-                  : problem.answer
-              }
-            />
-          </div>
+
+          {/* Tampilkan Jawaban Benar hanya jika sudah benar */}
+          {shouldShowCorrectAnswer && (
+            <>
+              <p className="text-sm text-gray-600">
+                Jawaban yang benar adalah:
+              </p>
+              <div className="prose max-w-none text-gray-900 font-bold">
+                <MathRenderer
+                  text={
+                    problem.type === "mck"
+                      ? formatMckAnswer(problem.answer)
+                      : Array.isArray(problem.answer)
+                      ? problem.answer.join(", ")
+                      : problem.answer
+                  }
+                />
+              </div>
+
+              {/* Tombol Lihat Pembahasan di bawah section Jawaban Anda Benar */}
+              <div className="mt-4 flex justify-start">
+                <button
+                  onClick={handleToggleSolution}
+                  className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+                >
+                  {showSolution ? "Sembunyikan Pembahasan" : "Lihat Pembahasan"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {showSolution && (
+      {/* Solution Section (Hanya tampil jika showSolution TRUE) */}
+      {showSolution && isSolvedCorrectly && (
         <div className="mt-6 p-6 rounded-lg border-l-4 border-sky-500 bg-sky-50 shadow-md">
           {problem.has_solution ? (
             session || problem.is_public ? (

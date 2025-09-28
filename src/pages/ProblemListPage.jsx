@@ -1,9 +1,9 @@
 // src/pages/ProblemListPage.jsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, CheckCircle, XCircle } from "lucide-react"; // <-- Import CheckCircle & XCircle
 import MathRenderer from "../components/MathRenderer";
 import formatTextForHTML from "../util/formatTextForHTML";
 
@@ -11,45 +11,103 @@ const ProblemListPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [session, setSession] = useState(null); // <-- State Sesi
+  const [progressMap, setProgressMap] = useState({}); // <-- State untuk map progress
+
   const { categoryId, topicId, subtopicId } = useParams();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchProblems = async () => {
+  // Fungsi fetch data utama (dimemoize dengan useCallback)
+  const fetchProblemsAndProgress = useCallback(
+    async (currentSession) => {
+      setLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data: subtopicData, error: problemError } = await supabase
           .from("subtopics")
           .select(
             `
+          *,
+          topic:topic_id(
             *,
-            topic:topic_id(
-              *,
-              category:category_id(
-                *
-              )
-            ),
-            problems:problems(
+            category:category_id(
               *
             )
-          `
+          ),
+          problems:problems(
+            problem_id, 
+            id,
+            question_text,
+            tag
+          )
+        `
           )
           .eq("subtopic_id", subtopicId)
           .single();
 
-        if (error) throw error;
-        if (!data) throw new Error("Subtopik tidak ditemukan!");
+        if (problemError) throw problemError;
+        if (!subtopicData) throw new Error("Subtopik tidak ditemukan!");
 
-        setData(data);
+        setData(subtopicData);
+
+        // --- LOGIC: Fetch Progress ---
+        if (currentSession && subtopicData.problems.length > 0) {
+          const problemIds = subtopicData.problems.map((p) => p.problem_id);
+          const { data: progressData, error: progressError } = await supabase
+            .from("user_progress")
+            .select("problem_id, is_correct")
+            .eq("user_id", currentSession.user.id)
+            .in("problem_id", problemIds);
+
+          if (!progressError && progressData) {
+            const map = progressData.reduce((acc, curr) => {
+              acc[curr.problem_id] = curr.is_correct;
+              return acc;
+            }, {});
+            setProgressMap(map);
+          } else if (progressError) {
+            console.error("Error fetching progress:", progressError);
+          }
+        } else {
+          setProgressMap({}); // Reset progress jika tidak ada sesi
+        }
+        // --- END LOGIC ---
       } catch (error) {
-        console.error("Error fetching problems:", error);
+        console.error("Error fetching data:", error);
         setError(error.message);
       } finally {
         setLoading(false);
       }
-    };
+    },
+    [subtopicId]
+  );
 
-    fetchProblems();
-  }, [subtopicId]);
+  // Effect untuk mengelola sesi dan memanggil fetch data
+  useEffect(() => {
+    let mounted = true;
+
+    // 1. Ambil sesi awal
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      if (mounted) {
+        setSession(initialSession);
+        fetchProblemsAndProgress(initialSession);
+      }
+    });
+
+    // 2. Listener untuk perubahan state auth (login/logout)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        if (mounted) {
+          setSession(newSession);
+          fetchProblemsAndProgress(newSession);
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [fetchProblemsAndProgress]); // Tergantung pada fungsi fetchProblemsAndProgress
 
   const handleBackToSubtopic = () => {
     navigate(`/latsol/${categoryId}/${topicId}`);
@@ -114,36 +172,68 @@ const ProblemListPage = () => {
 
       <div className="mt-6 space-y-4">
         {data.problems.length > 0 ? (
-          data.problems.map((problem, index) => (
-            <Link
-              key={problem.id}
-              to={`/latsol/${categoryId}/${topicId}/${subtopicId}/${problem.problem_id}`}
-              className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
-            >
-              <div className="flex items-center gap-2">
-                {problem.tag && (
-                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                    {problem.tag}
-                  </span>
-                )}
-              </div>
-              <div className="mt-2 text-sm text-gray-500 prose max-w-none">
-                {problem.question_text.length <= 200 ? (
-                  <MathRenderer
-                    text={formatTextForHTML(
-                      problem.question_text.substring(0, 200)
+          data.problems.map((problem, index) => {
+            // Logika menentukan status progress
+            const problemProgress = progressMap[problem.problem_id];
+            const isCorrect = problemProgress === true;
+            const isAttempted = problemProgress !== undefined;
+
+            return (
+              <Link
+                key={problem.id}
+                to={`/latsol/${categoryId}/${topicId}/${subtopicId}/${problem.problem_id}`}
+                className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {/* Display solved status icon if user is logged in */}
+                    {session &&
+                      (isAttempted ? (
+                        isCorrect ? (
+                          <CheckCircle
+                            size={20}
+                            className="text-green-500"
+                            title="Benar"
+                          />
+                        ) : (
+                          <XCircle
+                            size={20}
+                            className="text-red-500"
+                            title="Salah"
+                          />
+                        )
+                      ) : (
+                        <div
+                          className="w-5 h-5 bg-gray-100 rounded-full border border-gray-300"
+                          title="Belum Dicoba"
+                        ></div>
+                      ))}
+
+                    {problem.tag && (
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                        {problem.tag}
+                      </span>
                     )}
-                  />
-                ) : (
-                  <MathRenderer
-                    text={formatTextForHTML(
-                      problem.question_text.substring(0, 200) + "..."
-                    )}
-                  />
-                )}
-              </div>
-            </Link>
-          ))
+                  </div>
+                </div>
+                <div className="mt-2 text-sm text-gray-500 prose max-w-none">
+                  {problem.question_text.length <= 200 ? (
+                    <MathRenderer
+                      text={formatTextForHTML(
+                        problem.question_text.substring(0, 200)
+                      )}
+                    />
+                  ) : (
+                    <MathRenderer
+                      text={formatTextForHTML(
+                        problem.question_text.substring(0, 200) + "..."
+                      )}
+                    />
+                  )}
+                </div>
+              </Link>
+            );
+          })
         ) : (
           <div className="rounded-lg bg-gray-100 p-6 text-center text-gray-500">
             Belum ada soal untuk subtopik ini.
