@@ -3,16 +3,26 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient.js";
 import toast from "react-hot-toast";
 import MathRenderer from "../../components/MathRenderer.jsx";
-import { Edit, Trash2, Plus, X, ChevronUp, ChevronDown } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Plus,
+  X,
+  ChevronUp,
+  ChevronDown,
+  Copy,
+} from "lucide-react";
 import formatTextForHTML from "../../util/formatTextForHTML.js";
 
 const TheoryManagementPage = () => {
+  // categories tetap disimpan untuk digunakan di MODAL (Tambah/Edit Teori)
   const [categories, setCategories] = useState([]);
+
   const [topics, setTopics] = useState([]);
   const [subtopics, setSubtopics] = useState([]);
   const [theories, setTheories] = useState([]);
 
-  const [selectedCategory, setSelectedCategory] = useState("");
+  // Filter utama hanya menggunakan Topic dan Subtopic
   const [selectedTopic, setSelectedTopic] = useState("");
   const [selectedSubtopic, setSelectedSubtopic] = useState("");
 
@@ -27,7 +37,9 @@ const TheoryManagementPage = () => {
   const [formSubtopics, setFormSubtopics] = useState([]);
   const [formSubtopic, setFormSubtopic] = useState("");
 
+  // Memuat Topik filter (hanya dari "List Teori") dan semua Kategori (untuk modal) saat komponen dimuat
   useEffect(() => {
+    fetchInitialTopics();
     fetchCategories();
   }, []);
 
@@ -70,25 +82,47 @@ const TheoryManagementPage = () => {
     }
   };
 
-  const fetchTopics = async (categoryId) => {
-    if (!categoryId) {
-      setTopics([]);
-      setSubtopics([]);
-      setSelectedTopic("");
-      setSelectedSubtopic("");
+  /**
+   * Mengambil Topik hanya dari Kategori yang bernama "List Teori"
+   * untuk digunakan sebagai filter utama.
+   */
+  const fetchInitialTopics = async () => {
+    setSelectedTopic("");
+    setSelectedSubtopic("");
+    setSubtopics([]);
+
+    // 1. Cari ID kategori "List Teori"
+    const { data: categoryData, error: categoryError } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("category_name", "List Teori")
+      .single();
+
+    if (categoryError || !categoryData) {
+      console.error(
+        "Error fetching 'List Teori' category or not found:",
+        categoryError
+      );
+      toast.error("Kategori 'List Teori' tidak ditemukan atau gagal dimuat.");
+      setTopics([]); // Set topics empty if not found
       return;
     }
+
+    const listTeoriCategoryId = categoryData.id;
+
+    // 2. Muat Topik berdasarkan category_id tersebut
     const { data, error } = await supabase
       .from("topics")
       .select("*")
-      .eq("category_id", categoryId)
+      .eq("category_id", listTeoriCategoryId)
       .order("sort_order", { ascending: true });
+
     if (error) {
       console.error(error);
+      toast.error("Gagal memuat topik!");
+    } else {
+      setTopics(data);
     }
-    setTopics(data);
-    setSelectedTopic("");
-    setSelectedSubtopic("");
   };
 
   const fetchSubtopics = async (topicId) => {
@@ -180,9 +214,20 @@ const TheoryManagementPage = () => {
       setFormTopic(ancestors.topicId || "");
       setFormSubtopic(item.subtopic_id);
     } else {
-      setFormCategory(selectedCategory || "");
+      // Mengisi form modal dari filter yang sedang aktif
+      setFormCategory("");
       setFormTopic(selectedTopic || "");
       setFormSubtopic(selectedSubtopic || "");
+      // Cari categoryId untuk topik yang dipilih saat ini (di filter utama)
+      if (selectedTopic) {
+        const selectedTopicData = topics.find((t) => t.id === selectedTopic);
+        if (selectedTopicData) {
+          setFormCategory(selectedTopicData.category_id);
+          // Panggil fetchModalTopics dan fetchModalSubtopics agar modal terisi
+          fetchModalTopics(selectedTopicData.category_id);
+          fetchModalSubtopics(selectedTopic);
+        }
+      }
     }
   };
 
@@ -237,7 +282,54 @@ const TheoryManagementPage = () => {
     } else {
       toast.success(`Teori berhasil ${currentItem ? "diedit" : "ditambah"}!`);
       handleCloseModal();
-      fetchTheories();
+      // Muat ulang teori untuk subtopik yang aktif
+      if (selectedSubtopic) {
+        fetchTheories();
+      } else {
+        fetchInitialTopics();
+      }
+    }
+  };
+
+  const handleDuplicate = async (theory) => {
+    if (window.confirm("Yakin ingin menduplikasi teori ini?")) {
+      // Destructure content dan rest of the properties
+      const {
+        id,
+        created_at,
+        theory_id,
+        sort_order,
+        content,
+        ...restOfTheory
+      } = theory;
+
+      // Buat ID unik baru
+      const newTheoryId =
+        "TH-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+      // Hitung urutan baru (ditempatkan di akhir)
+      const newSortOrder =
+        theories.length > 0
+          ? Math.max(...theories.map((i) => i.sort_order)) + 1
+          : 0;
+
+      // Tambahkan prefix [Copy] ke konten
+      const newContent = "[Copy] " + content;
+
+      const { error } = await supabase.from("theories").insert({
+        ...restOfTheory,
+        content: newContent, // <-- Gunakan konten baru
+        theory_id: newTheoryId,
+        sort_order: newSortOrder,
+      });
+
+      if (error) {
+        toast.error("Gagal menduplikasi teori!");
+        console.error(error);
+      } else {
+        toast.success("Teori berhasil diduplikasi!");
+        fetchTheories();
+      }
     }
   };
 
@@ -270,11 +362,11 @@ const TheoryManagementPage = () => {
   };
 
   const handleClearFilters = () => {
-    setSelectedCategory("");
     setSelectedTopic("");
     setSelectedSubtopic("");
-    setTopics([]);
     setSubtopics([]);
+    // Muat ulang Topik yang hanya dari "List Teori"
+    fetchInitialTopics();
   };
 
   const handleMoveItem = async (itemId, direction) => {
@@ -325,48 +417,27 @@ const TheoryManagementPage = () => {
       <h2 className="mb-6 text-3xl font-bold text-gray-800">Kelola Teori</h2>
 
       <div className="mb-6 flex items-end space-x-4">
+        {/* Filter Kategori Dihapus dari Tampilan Utama */}
+
         <div className="flex flex-col">
-          <label className="mb-1 text-sm font-bold text-gray-700">
-            Kategori
-          </label>
+          <label className="mb-1 text-sm font-bold text-gray-700">Topik</label>
           <select
             onChange={(e) => {
-              setSelectedCategory(e.target.value);
-              fetchTopics(e.target.value);
+              setSelectedTopic(e.target.value);
+              fetchSubtopics(e.target.value);
             }}
-            value={selectedCategory}
+            value={selectedTopic}
             className="rounded-md border p-2"
           >
-            <option value="">Pilih Kategori</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.category_name}
+            <option value="">Pilih Topik</option>
+            {topics.map((topic) => (
+              <option key={topic.id} value={topic.id}>
+                {topic.topic_name}
               </option>
             ))}
           </select>
         </div>
-        {selectedCategory && (
-          <div className="flex flex-col">
-            <label className="mb-1 text-sm font-bold text-gray-700">
-              Topik
-            </label>
-            <select
-              onChange={(e) => {
-                setSelectedTopic(e.target.value);
-                fetchSubtopics(e.target.value);
-              }}
-              value={selectedTopic}
-              className="rounded-md border p-2"
-            >
-              <option value="">Pilih Topik</option>
-              {topics.map((topic) => (
-                <option key={topic.id} value={topic.id}>
-                  {topic.topic_name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+
         {selectedTopic && (
           <div className="flex flex-col">
             <label className="mb-1 text-sm font-bold text-gray-700">
@@ -471,6 +542,12 @@ const TheoryManagementPage = () => {
                         <Edit size={20} />
                       </button>
                       <button
+                        onClick={() => handleDuplicate(theory)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        <Copy size={20} />
+                      </button>
+                      <button
                         onClick={() => handleDelete(theory.id)}
                         className="text-red-600 hover:text-red-900"
                       >
@@ -486,11 +563,12 @@ const TheoryManagementPage = () => {
       ) : (
         <div className="flex items-center justify-center p-8 bg-gray-100 rounded-lg">
           <p className="text-gray-500">
-            Silakan pilih Kategori, Topik, dan Subtopik untuk menampilkan teori.
+            Silakan pilih Topik dan Subtopik untuk menampilkan teori.
           </p>
         </div>
       )}
 
+      {/* MODAL TEORI: Kategori, Topik, Subtopik tetap ditampilkan untuk memilih hierarki teori */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-2xl rounded-lg bg-white p-8 shadow-lg max-h-[90vh] overflow-y-auto">
