@@ -70,7 +70,7 @@ const TopicListPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-2 text-gray-500 mb-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-gray-500 mb-4 text-sm">
         <Link to="/latsol" className="hover:text-gray-700">
           Latihan Soal
         </Link>
