@@ -330,7 +330,7 @@ const UserQuestionManagementPage = () => {
               {/* Input Alasan (Jika Ditolak) */}
               {formStatus === "not_answerable" && (
                 <div className="space-y-3 p-3 bg-red-50 border-l-4 border-red-400 rounded-md">
-                  <label className="mb-1 text-sm font-bold text-gray-700 text-red-700">
+                  <label className="mb-1 text-sm font-bold text-red-700">
                     Alasan Penolakan
                   </label>
                   <textarea
