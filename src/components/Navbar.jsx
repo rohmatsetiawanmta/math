@@ -108,6 +108,19 @@ const Navbar = () => {
           {session ? (
             <>
               <NavLink
+                to="/dashboard"
+                className={({ isActive }) =>
+                  `py-2 text-lg font-medium md:py-0 ${
+                    isActive
+                      ? "text-blue-600 font-bold"
+                      : "text-gray-700 hover:text-blue-600"
+                  }`
+                }
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Dashboard
+              </NavLink>
+              <NavLink
                 to="/bookmarks"
                 className={({ isActive }) =>
                   `py-2 text-lg font-medium md:py-0 ${
