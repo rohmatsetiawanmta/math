@@ -17,6 +17,7 @@ import TheoryManagementPage from "./pages/admin/TheoryManagementPage.jsx";
 import UserManagementPage from "./pages/admin/UserManagementPage.jsx";
 import UserBookmarksPage from "./pages/UserBookmarkPage.jsx";
 import UserDashboardPage from "./pages/UserDashboardPage.jsx";
+import ReportManagementPage from "./pages/admin/ReportManagementPage.jsx";
 
 const ProtectedRoute = ({ children, userRole, isLoading }) => {
   const navigate = useNavigate();
@@ -145,6 +146,7 @@ function App() {
                 <Route path="problems" element={<ProblemManagementPage />} />
                 <Route path="theories" element={<TheoryManagementPage />} />
                 <Route path="users" element={<UserManagementPage />} />
+                <Route path="reports" element={<ReportManagementPage />} />
               </Routes>
             </ProtectedRoute>
           }

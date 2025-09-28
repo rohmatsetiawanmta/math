@@ -33,7 +33,6 @@ const AdminPage = () => {
             Tambahkan, edit, atau hapus soal dan pembahasannya.
           </p>
         </Link>
-        {/* Tambahkan link baru di sini */}
         <Link
           to="/admin/theories"
           className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
@@ -41,6 +40,18 @@ const AdminPage = () => {
           <h3 className="text-xl font-semibold text-gray-700">Kelola Teori</h3>
           <p className="text-gray-500">
             Lihat dan kelola semua teori yang digunakan dalam soal.
+          </p>
+        </Link>
+        {/* LINK BARU: Kelola Laporan Soal */}
+        <Link
+          to="/admin/reports"
+          className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg border-l-4 border-red-500"
+        >
+          <h3 className="text-xl font-semibold text-red-700">
+            Kelola Laporan Soal
+          </h3>
+          <p className="text-gray-500">
+            Tinjau dan kelola laporan masalah yang dikirim oleh pengguna.
           </p>
         </Link>
         <Link

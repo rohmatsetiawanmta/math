@@ -3,11 +3,27 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient.js";
-import { ChevronRight, Bookmark, BookmarkCheck } from "lucide-react"; // DITAMBAHKAN: Bookmark icons
+import {
+  ChevronRight,
+  Bookmark,
+  BookmarkCheck,
+  AlertTriangle,
+  Loader,
+} from "lucide-react";
 import MathRenderer from "../components/MathRenderer.jsx";
 import TeoriBox from "../components/TeoriBox.jsx";
 import { toast } from "react-hot-toast";
 import formatTextForHTML from "../util/formatTextForHTML.js";
+
+// FUNGSI UTILITY BARU: Untuk generate ID unik (RE-XXXXXXXX)
+const generateRandomId = (prefix) => {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < 8; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return `${prefix}-${result}`;
+};
 
 const getYouTubeEmbedUrl = (url) => {
   if (!url) {
@@ -101,6 +117,12 @@ const ProblemDetailPage = () => {
   // STATE BARU: untuk melacak status bookmark
   const [isBookmarked, setIsBookmarked] = useState(false);
 
+  // STATE BARU untuk Laporan Soal
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportContent, setReportContent] = useState("");
+  const [reportType, setReportType] = useState("Kesalahan Jawaban");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false); // Loading state
+
   const { categoryId, topicId, subtopicId, problemId } = useParams();
   const navigate = useNavigate();
 
@@ -138,6 +160,52 @@ const ProblemDetailPage = () => {
       setIsBookmarked(true);
     } else {
       setIsBookmarked(false);
+    }
+  };
+
+  // FUNGSI BARU: Menangani pengiriman laporan
+  const handleReportProblem = async (e) => {
+    e.preventDefault();
+    if (!session || !problem) {
+      toast.error("Anda harus login untuk melaporkan soal.");
+      return;
+    }
+
+    if (reportContent.trim().length < 10) {
+      toast.error(
+        "Mohon jelaskan laporan Anda lebih detail (min. 10 karakter)."
+      );
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    const reportId = generateRandomId("RE");
+
+    try {
+      const { error } = await supabase.from("problem_reports").insert({
+        report_id: reportId,
+        user_id: session.user.id,
+        problem_id: problem.problem_id,
+        report_type: reportType,
+        report_content: reportContent.trim(),
+        report_status: "open",
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success(
+        "Laporan berhasil dikirim! Terima kasih atas masukan Anda."
+      );
+      setIsReportModalOpen(false);
+      setReportContent("");
+      setReportType("Kesalahan Jawaban");
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      toast.error(`Gagal mengirim laporan: ${error.message}`);
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
 
@@ -476,7 +544,7 @@ const ProblemDetailPage = () => {
 
       {/* Bagian Soal */}
       <div className="mt-6 rounded-lg bg-white p-6 shadow-md">
-        {/* UPDATE: Container baru untuk tombol bookmark */}
+        {/* UPDATE: Container baru untuk tombol bookmark dan report */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-bold text-gray-800">Soal</h2>
@@ -486,25 +554,39 @@ const ProblemDetailPage = () => {
               </span>
             )}
           </div>
-          {/* START: Tombol Bookmark BARU */}
-          {session && (
-            <button
-              onClick={handleToggleBookmark}
-              className={`p-2 rounded-full transition-colors ${
-                isBookmarked
-                  ? "bg-yellow-400 text-yellow-900 hover:bg-yellow-500"
-                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-              }`}
-              title={isBookmarked ? "Hapus Bookmark" : "Bookmark Soal"}
-            >
-              {isBookmarked ? (
-                <BookmarkCheck size={20} />
-              ) : (
-                <Bookmark size={20} />
-              )}
-            </button>
-          )}
-          {/* END: Tombol Bookmark BARU */}
+          {/* START: Tombol Aksi (Bookmark dan Lapor Soal) */}
+          <div className="flex items-center space-x-2">
+            {/* Tombol Lapor Soal BARU */}
+            {session && (
+              <button
+                onClick={() => setIsReportModalOpen(true)}
+                className="p-2 rounded-full transition-colors bg-red-100 text-red-500 hover:bg-red-200"
+                title="Laporkan Soal"
+              >
+                <AlertTriangle size={20} />
+              </button>
+            )}
+
+            {/* Tombol Bookmark yang sudah ada */}
+            {session && (
+              <button
+                onClick={handleToggleBookmark}
+                className={`p-2 rounded-full transition-colors ${
+                  isBookmarked
+                    ? "bg-yellow-400 text-yellow-900 hover:bg-yellow-500"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
+                title={isBookmarked ? "Hapus Bookmark" : "Bookmark Soal"}
+              >
+                {isBookmarked ? (
+                  <BookmarkCheck size={20} />
+                ) : (
+                  <Bookmark size={20} />
+                )}
+              </button>
+            )}
+          </div>
+          {/* END: Tombol Aksi */}
         </div>
         <div className="prose max-w-none">
           <MathRenderer
@@ -753,7 +835,91 @@ const ProblemDetailPage = () => {
           )}
         </div>
       )}
+
+      {/* START: MODAL LAPORAN SOAL BARU */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <AlertTriangle className="text-red-500" size={24} /> Laporkan
+                Soal
+              </h3>
+              <button
+                onClick={() => setIsReportModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+                disabled={isSubmittingReport}
+              >
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleReportProblem} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-bold text-gray-700">
+                  Tipe Laporan
+                </label>
+                <select
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="w-full rounded-md border p-2 focus:border-red-500 focus:outline-none"
+                  required
+                  disabled={isSubmittingReport}
+                >
+                  <option value="Kesalahan Jawaban">
+                    Kesalahan Kunci Jawaban / Pembahasan
+                  </option>
+                  <option value="Soal Kurang Jelas">
+                    Redaksi Soal Kurang Jelas / Keliru
+                  </option>
+                  <option value="Link Video Rusak">
+                    Link Video Pembahasan Rusak / Salah
+                  </option>
+                  <option value="Saran Umum">Saran / Umpan Balik Umum</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-bold text-gray-700">
+                  Detail Masalah
+                </label>
+                <textarea
+                  value={reportContent}
+                  onChange={(e) => setReportContent(e.target.value)}
+                  className="w-full rounded-md border p-2 focus:border-red-500 focus:outline-none"
+                  rows="4"
+                  placeholder="Jelaskan detail masalah (minimal 10 karakter)..."
+                  required
+                  disabled={isSubmittingReport}
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsReportModalOpen(false)}
+                  className="rounded-md bg-gray-300 px-4 py-2 hover:bg-gray-400"
+                  disabled={isSubmittingReport}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600 flex items-center justify-center gap-2 disabled:bg-gray-400"
+                  disabled={
+                    reportContent.trim().length < 10 || isSubmittingReport
+                  }
+                >
+                  {isSubmittingReport && (
+                    <Loader size={20} className="animate-spin" />
+                  )}
+                  Kirim Laporan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* END: MODAL LAPORAN SOAL */}
     </div>
   );
 };
+
 export default ProblemDetailPage;
