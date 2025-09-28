@@ -119,7 +119,7 @@ const UserManagementPage = () => {
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
                     {user.email}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 font-mono text-xs">
+                  <td className="px-6 py-4 text-gray-500 font-mono text-xs">
                     {user.id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
