@@ -42,12 +42,22 @@ const AdminPage = () => {
             Lihat dan kelola semua teori yang digunakan dalam soal.
           </p>
         </Link>
-        {/* LINK BARU: Kelola Laporan Soal */}
+        <Link
+          to="/admin/user-questions"
+          className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
+        >
+          <h3 className="text-xl font-semibold text-gray-700">
+            Kelola Pertanyaan User
+          </h3>
+          <p className="text-gray-500">
+            Tinjau, moderasi, dan jawab pertanyaan soal yang diunggah pengguna.
+          </p>
+        </Link>
         <Link
           to="/admin/reports"
-          className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg border-l-4 border-red-500"
+          className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
         >
-          <h3 className="text-xl font-semibold text-red-700">
+          <h3 className="text-xl font-semibold text-gray-700">
             Kelola Laporan Soal
           </h3>
           <p className="text-gray-500">

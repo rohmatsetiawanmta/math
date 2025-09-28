@@ -10,6 +10,7 @@ const navItems = [
   { name: "Latihan Soal", to: "/latsol" },
   { name: "Materi", to: "/materi" },
   { name: "Drill Soal", to: "/drill-soal" },
+  { name: "Tanya Soal", to: "/tanya-soal" },
 ];
 
 const Navbar = () => {

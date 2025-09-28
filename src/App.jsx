@@ -18,6 +18,9 @@ import UserManagementPage from "./pages/admin/UserManagementPage.jsx";
 import UserBookmarksPage from "./pages/UserBookmarkPage.jsx";
 import UserDashboardPage from "./pages/UserDashboardPage.jsx";
 import ReportManagementPage from "./pages/admin/ReportManagementPage.jsx";
+import QuestionManagementPage from "./pages/admin/UserQuestionManagementPage.jsx";
+import TanyaSoalPage from "./pages/TanyaSoalPage.jsx";
+import UserQuestionManagementPage from "./pages/admin/UserQuestionManagementPage.jsx";
 
 const ProtectedRoute = ({ children, userRole, isLoading }) => {
   const navigate = useNavigate();
@@ -131,11 +134,11 @@ function App() {
         />
         <Route path="/materi" element={<ComingSoon />} />
         <Route path="/drill-soal" element={<ComingSoon />} />
+        <Route path="/tanya-soal" element={<TanyaSoalPage />} />
 
         <Route path="/dashboard" element={<UserDashboardPage />} />
         <Route path="/bookmarks" element={<UserBookmarksPage />} />
 
-        {/* Rute yang dilindungi untuk Admin */}
         <Route
           path="/admin/*"
           element={
@@ -147,6 +150,10 @@ function App() {
                 <Route path="theories" element={<TheoryManagementPage />} />
                 <Route path="users" element={<UserManagementPage />} />
                 <Route path="reports" element={<ReportManagementPage />} />
+                <Route
+                  path="user-questions"
+                  element={<UserQuestionManagementPage />}
+                />
               </Routes>
             </ProtectedRoute>
           }
