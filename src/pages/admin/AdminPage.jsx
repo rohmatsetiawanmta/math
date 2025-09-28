@@ -43,6 +43,15 @@ const AdminPage = () => {
             Lihat dan kelola semua teori yang digunakan dalam soal.
           </p>
         </Link>
+        <Link
+          to="/admin/users"
+          className="block rounded-lg bg-white p-6 shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg"
+        >
+          <h3 className="text-xl font-semibold text-gray-700">Kelola User</h3>
+          <p className="text-gray-500">
+            Lihat daftar user dan kelola role user.
+          </p>
+        </Link>
       </div>
     </div>
   );

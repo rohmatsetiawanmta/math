@@ -14,6 +14,7 @@ import ProblemListPage from "./pages/ProblemListPage";
 import ComingSoon from "./pages/ComingSoon";
 import LoginPage from "./pages/LoginPage";
 import TheoryManagementPage from "./pages/admin/TheoryManagementPage.jsx";
+import UserManagementPage from "./pages/admin/UserManagementPage.jsx";
 
 const ProtectedRoute = ({ children, userRole, isLoading }) => {
   const navigate = useNavigate();
@@ -138,6 +139,7 @@ function App() {
                 <Route path="manage" element={<HierarchyManager />} />
                 <Route path="problems" element={<ProblemManagementPage />} />
                 <Route path="theories" element={<TheoryManagementPage />} />
+                <Route path="users" element={<UserManagementPage />} />
               </Routes>
             </ProtectedRoute>
           }
