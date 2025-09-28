@@ -326,7 +326,7 @@ const UserDashboardPage = () => {
                   to={linkPath}
                   className="block p-4 border border-red-200 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                 >
-                  <div className="flex items-center gap-2 mb-1 text-xs text-red-700 font-semibold">
+                  <div className="flex flex-wrap items-center gap-2 mb-1 text-xs text-red-700 font-semibold">
                     <span className="text-gray-500 font-medium">
                       #{index + 1}
                     </span>
@@ -347,8 +347,8 @@ const UserDashboardPage = () => {
                   <div className="text-sm text-gray-800 prose max-w-none line-clamp-2">
                     <MathRenderer
                       text={formatTextForHTML(
-                        problem.question_text.substring(0, 150) +
-                          (problem.question_text.length > 150 ? "..." : "")
+                        problem.question_text.substring(0, 200) +
+                          (problem.question_text.length > 200 ? "..." : "")
                       )}
                     />
                   </div>

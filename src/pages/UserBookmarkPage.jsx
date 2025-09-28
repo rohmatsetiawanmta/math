@@ -160,16 +160,16 @@ const UserBookmarksPage = () => {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2 text-sm text-gray-500">
+                    <div className="flex flex-wrap items-center gap-2 mb-2 text-sm text-gray-500">
                       <span>{hierarchy.category_name}</span>
                       <ChevronRight size={12} />
                       <span>{problem.subtopic.topic.topic_name}</span>
                       <ChevronRight size={12} />
-                      <span className="font-medium text-gray-700">
+                      <span className="font-medium text-gray-700 mr-2">
                         {problem.subtopic.subtopic_name}
                       </span>
                       {problem.tag && (
-                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 ml-2">
+                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
                           {problem.tag}
                         </span>
                       )}
