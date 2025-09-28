@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react"; // Import UserCircle untuk ikon Profile
 import { supabase } from "../lib/supabaseClient.js";
-import LogoImg from "../image/logo.png"; //
+import LogoImg from "../image/logo.png";
 
 const navItems = [
   { name: "Latihan Soal", to: "/latsol" },
@@ -14,6 +14,7 @@ const navItems = [
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false); // State baru untuk dropdown Profile
   const [session, setSession] = useState(null);
   const [userRole, setUserRole] = useState(null);
 
@@ -60,11 +61,22 @@ const Navbar = () => {
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+    setIsProfileDropdownOpen(false); // Tutup dropdown profile saat menu mobile di-toggle
+  };
+
+  const toggleProfileDropdown = () => {
+    setIsProfileDropdownOpen(!isProfileDropdownOpen);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsMenuOpen(false);
+    setIsProfileDropdownOpen(false);
+  };
+
+  const handleDropdownClick = () => {
+    setIsProfileDropdownOpen(false);
+    setIsMenuOpen(false); // Tutup menu mobile jika diakses dari sana
   };
 
   return (
@@ -106,56 +118,77 @@ const Navbar = () => {
           ))}
 
           {session ? (
-            <>
-              <NavLink
-                to="/dashboard"
-                className={({ isActive }) =>
-                  `py-2 text-lg font-medium md:py-0 ${
-                    isActive
-                      ? "text-blue-600 font-bold"
-                      : "text-gray-700 hover:text-blue-600"
-                  }`
-                }
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Dashboard
-              </NavLink>
-              <NavLink
-                to="/bookmarks"
-                className={({ isActive }) =>
-                  `py-2 text-lg font-medium md:py-0 ${
-                    isActive
-                      ? "text-yellow-600 font-bold" // Ubah warna untuk menonjolkan bookmark
-                      : "text-gray-700 hover:text-yellow-600"
-                  }`
-                }
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Bookmark
-              </NavLink>
-              {userRole === "admin" && (
-                <NavLink
-                  to="/admin"
-                  className={({ isActive }) =>
-                    `py-2 text-lg font-medium md:py-0 ${
-                      isActive
-                        ? "text-blue-600 font-bold"
-                        : "text-gray-700 hover:text-blue-600"
-                    }`
-                  }
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Admin
-                </NavLink>
-              )}
+            // START: Dropdown Profile (untuk desktop dan mobile)
+            <div className="relative">
               <button
-                onClick={handleLogout}
-                className="py-2 px-4 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 shadow-sm md:py-1"
+                onClick={toggleProfileDropdown}
+                className="flex items-center gap-1 py-2 text-lg font-medium text-gray-700 hover:text-blue-600 md:py-0"
               >
-                Logout
+                <span className="hidden md:inline">Profile</span>
+                <span className="md:hidden">
+                  Profile {isProfileDropdownOpen ? "▲" : "▼"}
+                </span>
               </button>
-            </>
+
+              {isProfileDropdownOpen && (
+                <div
+                  className="md:absolute md:right-0 md:mt-2 w-full md:w-48 rounded-md shadow-lg bg-white focus:outline-none"
+                  // Gunakan kelas flex-col dan p-2 untuk tampilan mobile/desktop yang konsisten
+                >
+                  <NavLink
+                    to="/dashboard"
+                    className={({ isActive }) =>
+                      `block px-4 py-2 text-md font-medium ${
+                        isActive
+                          ? "text-blue-600 bg-gray-100 font-bold"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`
+                    }
+                    onClick={handleDropdownClick}
+                  >
+                    Dashboard
+                  </NavLink>
+                  <NavLink
+                    to="/bookmarks"
+                    className={({ isActive }) =>
+                      `block px-4 py-2 text-md font-medium ${
+                        isActive
+                          ? "text-yellow-600 bg-gray-100 font-bold"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`
+                    }
+                    onClick={handleDropdownClick}
+                  >
+                    Bookmark
+                  </NavLink>
+                  {userRole === "admin" && (
+                    <NavLink
+                      to="/admin"
+                      className={({ isActive }) =>
+                        `block px-4 py-2 text-md font-medium ${
+                          isActive
+                            ? "text-red-600 bg-gray-100 font-bold"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }`
+                      }
+                      onClick={handleDropdownClick}
+                    >
+                      Admin Panel
+                    </NavLink>
+                  )}
+                  <div className="border-t border-gray-100 md:block">
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 text-md font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
+            // END: Dropdown Profile
             <Link
               to="/login"
               className="py-2 px-4 rounded-md bg-blue-600 text-white font-semibold hover:bg-blue-700 shadow-sm md:py-1"
