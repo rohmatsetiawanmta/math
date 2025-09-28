@@ -241,7 +241,7 @@ const UserDashboardPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h2 className="mb-4 flex items-center gap-3 text-3xl font-bold text-gray-800">
-        <GaugeCircle size={30} className="text-blue-600" /> Dashboard Pengguna
+        Dashboard
       </h2>
 
       {/* START: FILTER KATEGORI */}
