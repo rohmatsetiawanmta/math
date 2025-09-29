@@ -588,7 +588,7 @@ const ProblemDetailPage = () => {
           </div>
           {/* END: Tombol Aksi */}
         </div>
-        <div className="prose max-w-none">
+        <div className="prose max-w-none overflow-x-auto">
           <MathRenderer
             key={`q-${problem.id}`}
             text={formatTextForHTML(problem.question_text)}
@@ -636,7 +636,7 @@ const ProblemDetailPage = () => {
                         : "h-4 w-4 text-blue-600 rounded"
                     }
                   />
-                  <span className="prose max-w-none text-gray-700">
+                  <span className="prose max-w-none text-gray-700 overflow-x-auto">
                     <MathRenderer
                       text={formatTextForHTML(
                         `${key}. ${problem.options[key]}`
@@ -759,7 +759,7 @@ const ProblemDetailPage = () => {
               <p className="text-sm text-gray-600">
                 Jawaban yang benar adalah:
               </p>
-              <div className="prose max-w-none text-gray-900 font-bold">
+              <div className="prose max-w-none text-gray-900 font-bold overflow-x-auto">
                 <MathRenderer
                   text={
                     problem.type === "mck"
@@ -794,7 +794,7 @@ const ProblemDetailPage = () => {
                 <h3 className="mb-2 text-xl font-bold text-sky-700">
                   Pembahasan
                 </h3>
-                <div className="prose max-w-none text-sky-900">
+                <div className="prose max-w-none text-sky-900 overflow-x-auto">
                   {renderSolutionWithTheories(
                     problem.solution_text,
                     theoriesWithOrder

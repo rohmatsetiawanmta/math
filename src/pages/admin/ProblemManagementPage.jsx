@@ -914,7 +914,7 @@ const ProblemManagementPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
                       {problem.problem_id}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-gray-900 overflow-x-auto">
                       <MathRenderer
                         text={formatTextForHTML(problem.question_text || "")}
                       />
@@ -1136,7 +1136,7 @@ const ProblemManagementPage = () => {
                   <label className="mb-2 block text-sm font-bold text-gray-700">
                     Pratinjau Soal
                   </label>
-                  <div className="p-2 bg-gray-100 rounded-md min-h-[10rem] max-h-[25rem] overflow-y-auto prose max-w-none">
+                  <div className="p-2 bg-gray-100 rounded-md min-h-[10rem] max-h-[25rem] overflow-y-auto prose max-w-none overflow-x-auto">
                     <MathRenderer
                       text={formatTextForHTML(form.question_text || "")}
                     />
@@ -1348,7 +1348,7 @@ const ProblemManagementPage = () => {
                     <label className="mb-2 block text-sm font-bold text-gray-700">
                       Pratinjau Jawaban
                     </label>
-                    <div className="p-2 bg-gray-100 rounded-md min-h-[10rem] max-h-[25rem] overflow-y-auto prose max-w-none">
+                    <div className="p-2 bg-gray-100 rounded-md min-h-[10rem] max-h-[25rem] overflow-y-auto prose max-w-none overflow-x-auto">
                       <MathRenderer
                         text={formatTextForHTML(form.answer || "")}
                       />
@@ -1388,7 +1388,7 @@ const ProblemManagementPage = () => {
                   <label className="mb-2 block text-sm font-bold text-gray-700">
                     Pratinjau Pembahasan
                   </label>
-                  <div className="p-2 bg-gray-100 rounded-md min-h-[10rem] max-h-[25rem] overflow-y-auto prose max-w-none">
+                  <div className="p-2 bg-gray-100 rounded-md min-h-[10rem] max-h-[25rem] overflow-y-auto prose max-w-none overflow-x-auto">
                     <MathRenderer
                       text={formatTextForHTML(form.solution_text || "")}
                     />
