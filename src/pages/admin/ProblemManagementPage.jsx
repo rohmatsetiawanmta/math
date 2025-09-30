@@ -444,6 +444,54 @@ const ProblemManagementPage = () => {
     });
   };
 
+  // FUNGSI BARU UNTUK DATA SUFFICIENCY (DS)
+  const handleInsertDS = () => {
+    // 1. Opsi Standar Data Sufficiency
+    const dsOptions = [
+      {
+        key: "A",
+        value:
+          "Pernyataan (1) SAJA cukup untuk menjawab pertanyaan, tetapi pernyataan (2) SAJA tidak cukup.",
+      },
+      {
+        key: "B",
+        value:
+          "Pernyataan (2) SAJA cukup untuk menjawab pertanyaan, tetapi pernyataan (1) SAJA tidak cukup.",
+      },
+      {
+        key: "C",
+        value:
+          "DUA pernyataan BERSAMA-SAMA cukup untuk menjawab pertanyaan, tetapi SATU pernyataan SAJA tidak cukup.",
+      },
+      {
+        key: "D",
+        value:
+          "Pernyataan (1) SAJA cukup untuk menjawab pertanyaan, dan pernyataan (2) SAJA cukup.",
+      },
+      {
+        key: "E",
+        value: "DUA pernyataan TIDAK CUKUP untuk menjawab pertanyaan.",
+      },
+    ];
+
+    // 2. Template Teks Soal
+    const dsQuestionText =
+      "**Pertanyaan:** [Tulis pertanyaan utama di sini]\n\n" +
+      "**Pernyataan:**\n" +
+      "1. [Tulis Pernyataan 1 di sini]\n" +
+      "2. [Tulis Pernyataan 2 di sini]";
+
+    setForm({
+      ...form,
+      type: "mcq", // Set tipe soal menjadi MCQ
+      question_text: dsQuestionText, // Set teks soal dengan template DS
+      options: dsOptions, // Set 5 opsi standar
+      answer: "", // Reset kunci jawaban
+      tag: form.tag ? form.tag + ", " : "", // Tambahkan tag DS
+    });
+  };
+  // AKHIR FUNGSI BARU
+
   const handleInsertBold = () => {
     setForm({
       ...form,
@@ -459,9 +507,10 @@ const ProblemManagementPage = () => {
   };
 
   const handleInsertUnderline = () => {
+    const formattedText = "<u>teks</u>";
     setForm({
       ...form,
-      question_text: (form.question_text || "") + "#teks#",
+      question_text: (form.question_text || "") + formattedText,
     });
   };
 
@@ -776,18 +825,38 @@ const ProblemManagementPage = () => {
     }
   };
 
+  // LOGIKA BARU: Dapatkan ID dan Nama Kategori "List Teori"
+  const listTeoriCategory = categories.find(
+    (cat) => cat.category_name === "List Teori"
+  );
+  const listTeoriCategoryName = listTeoriCategory
+    ? listTeoriCategory.category_name
+    : "Memuat Kategori...";
+  const listTeoriCategoryId = listTeoriCategory ? listTeoriCategory.id : "";
+
   const handleOpenTheoryModal = async () => {
     setIsTheoryModalOpen(true);
-    // Atur dropdown modal teori secara default ke subtopik soal saat ini
-    const subtopicId = formSubtopic;
-    if (subtopicId) {
-      const ancestors = await fetchAncestors(subtopicId);
-      if (ancestors) {
-        setTheoryModalCategory(ancestors.categoryId);
-        await fetchTheoryModalTopics(ancestors.categoryId, ancestors.topicId);
-        setTheoryModalSubtopic(ancestors.subtopicId);
-      }
+
+    // PERUBAHAN KUNCI: Paksa kategori menjadi "List Teori"
+    if (!listTeoriCategoryId) {
+      toast.error(
+        "Kategori 'List Teori' tidak ditemukan. Harap buat kategori tersebut."
+      );
+      setIsTheoryModalOpen(false);
+      return;
     }
+
+    // 1. Atur Kategori ke "List Teori"
+    setTheoryModalCategory(listTeoriCategoryId);
+
+    // 2. Muat Topik berdasarkan kategori ini
+    await fetchTheoryModalTopics(listTeoriCategoryId);
+
+    // 3. Reset Topik/Subtopik agar Admin bisa memilih ulang
+    setTheoryModalTopic("");
+    setTheoryModalSubtopic("");
+
+    // Logika ancestors yang lama dihapus
   };
 
   return (
@@ -1094,6 +1163,14 @@ const ProblemManagementPage = () => {
                       className="rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 text-sm"
                     >
                       P-Q
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleInsertDS} // <--- TOMBOL BARU DS
+                      className="rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 text-sm font-semibold"
+                      title="Insert Data Sufficiency Template"
+                    >
+                      DS
                     </button>
                     <button
                       type="button"
@@ -1518,22 +1595,15 @@ const ProblemManagementPage = () => {
                 <label className="mb-1 block text-sm font-bold text-gray-700">
                   Kategori Teori
                 </label>
-                <select
-                  onChange={async (e) => {
-                    setTheoryModalCategory(e.target.value);
-                    await fetchTheoryModalTopics(e.target.value);
-                  }}
-                  value={theoryModalCategory}
-                  className="w-full rounded-md border p-2"
-                >
-                  <option value="">Pilih Kategori</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.category_name}
-                    </option>
-                  ))}
-                </select>
+                {/* TAMPILAN PERMANEN KATEGORI "LIST TEORI" */}
+                <span className="block w-full rounded-md border p-2 bg-gray-200 font-semibold text-gray-700">
+                  {listTeoriCategoryName}
+                </span>
+                {/* Hidden input untuk menyimpan nilai ID yang sudah ditetapkan */}
+                <input type="hidden" value={theoryModalCategory} readOnly />
               </div>
+
+              {/* Dropdown Topik Teori: Hanya muncul jika Kategori sudah ditetapkan */}
               {theoryModalCategory && (
                 <div className="flex-1">
                   <label className="mb-1 block text-sm font-bold text-gray-700">
