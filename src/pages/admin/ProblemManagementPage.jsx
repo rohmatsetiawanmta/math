@@ -435,16 +435,40 @@ const ProblemManagementPage = () => {
     setForm(updatedForm);
   };
 
+  // FUNGSI HANDLE UNTUK TOMBOL P-Q (Tabel Kuantitas) - DIMODIFIKASI
   const handleInsertTable = () => {
+    // 1. Teks Intro Standar P-Q (Markdown/MathJax supported)
+    const pqIntroText =
+      "Berdasarkan informasi yang diberikan, manakah hubungan antara kuantitas $P$ dan $Q$ berikut yang benar?";
+
+    // 2. Struktur Tabel P-Q
     const tableHTML =
-      '<table style="border: 1px solid"><tr style="border: 1px solid;"><th style="border: 1px solid; width:100px">$P$</th><th style="width:100px">$Q$</th></tr><tr><td style="border: 1px solid; text-align:center">...</td><td style="text-align:center">...</td></tr></table>';
+      '\n\n<table style="border: 1px solid"><tr style="border: 1px solid; height: 30px"><th style="border: 1px solid; width:100px">$P$</th><th style="width:100px">$Q$</th></tr><tr style="height:40px"><td style="border: 1px solid; text-align:center">...</td><td style="text-align:center">...</td></tr></table>';
+
+    // 3. Opsi Standar P-Q (4 opsi untuk MCQ)
+    const pqOptions = [
+      { key: "A", value: "Kuantitas $P$ lebih besar daripada kuantitas $Q$." },
+      { key: "B", value: "Kuantitas $Q$ lebih besar daripada kuantitas $P$." },
+      { key: "C", value: "Kuantitas $P$ sama dengan kuantitas $Q$." },
+      {
+        key: "D",
+        value: "Hubungan antara kuantitas $P$ dan $Q$ tidak dapat ditentukan.",
+      },
+    ];
+
+    const newQuestionText = pqIntroText + tableHTML;
+
     setForm({
       ...form,
-      question_text: (form.question_text || "") + tableHTML,
+      type: "mcq", // Auto-change type to MCQ
+      question_text: newQuestionText, // Set new question text
+      options: pqOptions, // Set 4 fixed options
+      answer: "", // Reset answer
+      tag: (form.tag ? form.tag + ", " : "") + "P-Q",
     });
   };
 
-  // FUNGSI BARU UNTUK DATA SUFFICIENCY (DS)
+  // FUNGSI HANDLE UNTUK TOMBOL DS (Data Sufficiency)
   const handleInsertDS = () => {
     // 1. Opsi Standar Data Sufficiency
     const dsOptions = [
@@ -477,9 +501,9 @@ const ProblemManagementPage = () => {
     // 2. Template Teks Soal
     const dsQuestionText =
       "**Pertanyaan:** [Tulis pertanyaan utama di sini]\n\n" +
-      "Putuskan apakah pernyataan (1) dan (2) berikut cukup untuk menjawab pertanyaan tersebut.\n" +
-      "(1) [Tulis Pernyataan 1 di sini]\n" +
-      "(2) [Tulis Pernyataan 2 di sini]";
+      "**Pernyataan:**\n" +
+      "1. [Tulis Pernyataan 1 di sini]\n" +
+      "2. [Tulis Pernyataan 2 di sini]";
 
     setForm({
       ...form,
@@ -487,10 +511,10 @@ const ProblemManagementPage = () => {
       question_text: dsQuestionText, // Set teks soal dengan template DS
       options: dsOptions, // Set 5 opsi standar
       answer: "", // Reset kunci jawaban
-      tag: form.tag ? form.tag + ", " : "", // Tambahkan tag DS
+      tag: (form.tag ? form.tag + ", " : "") + "DS", // Tambahkan tag DS
     });
   };
-  // AKHIR FUNGSI BARU
+  // AKHIR FUNGSI BARU DS
 
   const handleInsertBold = () => {
     setForm({
@@ -1166,7 +1190,7 @@ const ProblemManagementPage = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={handleInsertDS} // <--- TOMBOL BARU DS
+                      onClick={handleInsertDS}
                       className="rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 text-sm font-semibold"
                       title="Insert Data Sufficiency Template"
                     >
@@ -1533,7 +1557,7 @@ const ProblemManagementPage = () => {
                     htmlFor="is-public-toggle"
                     className="ml-2 text-sm font-bold text-gray-700"
                   >
-                    Soal ini dapat dilihat publik
+                    Pembahasan soal ini dapat dilihat publik
                   </label>
                 </div>
               </div>
@@ -1591,18 +1615,6 @@ const ProblemManagementPage = () => {
             </div>
             {/* Dropdown untuk navigasi teori */}
             <div className="mb-4 flex space-x-4">
-              <div className="flex-1">
-                <label className="mb-1 block text-sm font-bold text-gray-700">
-                  Kategori Teori
-                </label>
-                {/* TAMPILAN PERMANEN KATEGORI "LIST TEORI" */}
-                <span className="block w-full rounded-md border p-2 bg-gray-200 font-semibold text-gray-700">
-                  {listTeoriCategoryName}
-                </span>
-                {/* Hidden input untuk menyimpan nilai ID yang sudah ditetapkan */}
-                <input type="hidden" value={theoryModalCategory} readOnly />
-              </div>
-
               {/* Dropdown Topik Teori: Hanya muncul jika Kategori sudah ditetapkan */}
               {theoryModalCategory && (
                 <div className="flex-1">
