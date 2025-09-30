@@ -109,6 +109,7 @@ const ProblemDetailPage = () => {
   const [feedback, setFeedback] = useState(null);
   const [session, setSession] = useState(null);
   const [theoriesWithOrder, setTheoriesWithOrder] = useState([]);
+  const [isCorrectLocally, setIsCorrectLocally] = useState(false);
 
   // STATE untuk melacak progress
   const [userProgress, setUserProgress] = useState(null);
@@ -303,8 +304,16 @@ const ProblemDetailPage = () => {
       }
       // Set feedback agar section Jawaban Anda Benar muncul
       setFeedback("correct");
+      setIsCorrectLocally(true);
+    } else if (problem && isCorrectLocally) {
+      if (problem.type === "mcq" || problem.type === "input") {
+        setUserAnswers(problem.answer);
+      } else {
+        setUserAnswers(JSON.parse(JSON.stringify(problem.answer)));
+      }
+      setFeedback("correct");
     }
-  }, [problem, userProgress]);
+  }, [problem, userProgress, isCorrectLocally]);
 
   // UPDATE: Panggil fetch bookmark di sini
   useEffect(() => {
@@ -376,7 +385,7 @@ const ProblemDetailPage = () => {
     let isCorrect;
 
     // 1. Kunci jika sudah benar
-    if (userProgress && userProgress.is_correct) {
+    if ((userProgress && userProgress.is_correct) || isCorrectLocally) {
       return;
     }
 
@@ -452,6 +461,10 @@ const ProblemDetailPage = () => {
           toast.success(`Jawaban Benar!`);
         }
       }
+    } else if (isCorrect) {
+      // <--- PERUBAHAN KUNCI: Jika BENAR dan TIDAK LOGIN
+      setIsCorrectLocally(true); // Atur state lokal ke true
+      toast.success(`Jawaban Benar!`);
     }
 
     // 4. Set visual feedback
@@ -533,10 +546,10 @@ const ProblemDetailPage = () => {
     );
   }
 
-  const isSolvedCorrectly = userProgress?.is_correct;
-  const showFeedback = isSolvedCorrectly || feedback;
-  // Jawaban benar ditampilkan hanya jika isSolvedCorrectly adalah TRUE atau feedback adalah 'correct'
-  const shouldShowCorrectAnswer = isSolvedCorrectly || feedback === "correct";
+  const hasAccessToSolution = userProgress?.is_correct || isCorrectLocally; // <--- BARU
+  const showFeedback = hasAccessToSolution || feedback;
+  // Jawaban benar ditampilkan hanya jika hasAccessToSolution adalah TRUE atau feedback adalah 'correct'
+  const shouldShowCorrectAnswer = hasAccessToSolution || feedback === "correct";
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -629,7 +642,7 @@ const ProblemDetailPage = () => {
                         : handleMcmaAnswerChange(e)
                     }
                     // Nonaktifkan input jika soal sudah benar
-                    disabled={isSolvedCorrectly}
+                    disabled={hasAccessToSolution}
                     className={
                       problem.type === "mcq"
                         ? "h-5 w-5 text-blue-600"
@@ -654,7 +667,7 @@ const ProblemDetailPage = () => {
             value={userAnswers}
             onChange={(e) => setUserAnswers(e.target.value)}
             // Nonaktifkan input jika soal sudah benar
-            disabled={isSolvedCorrectly}
+            disabled={hasAccessToSolution}
             className="w-full rounded-md border p-3 focus:border-blue-500 focus:outline-none"
             placeholder="Ketik jawaban Anda di sini..."
           />
@@ -701,7 +714,7 @@ const ProblemDetailPage = () => {
                             })
                           }
                           // Nonaktifkan input jika soal sudah benar
-                          disabled={isSolvedCorrectly}
+                          disabled={hasAccessToSolution}
                           className="h-4 w-4 text-blue-600"
                         />
                       </td>
@@ -716,7 +729,7 @@ const ProblemDetailPage = () => {
 
       <div className="mt-8 flex gap-4">
         {/* Tombol Cek Jawaban (Hilang jika sudah benar) */}
-        {!isSolvedCorrectly && (
+        {!hasAccessToSolution && (
           <button
             onClick={handleCheckAnswer}
             className="rounded-md bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:bg-gray-400"
@@ -770,8 +783,6 @@ const ProblemDetailPage = () => {
                   }
                 />
               </div>
-
-              {/* Tombol Lihat Pembahasan di bawah section Jawaban Anda Benar */}
               <div className="mt-4 flex justify-start">
                 <button
                   onClick={handleToggleSolution}
@@ -786,7 +797,7 @@ const ProblemDetailPage = () => {
       )}
 
       {/* Solution Section (Hanya tampil jika showSolution TRUE) */}
-      {showSolution && isSolvedCorrectly && (
+      {showSolution && hasAccessToSolution && (
         <div className="mt-6 p-6 rounded-lg border-l-4 border-sky-500 bg-sky-50 shadow-md">
           {problem.has_solution ? (
             session || problem.is_public ? (
