@@ -5,7 +5,6 @@ import { supabase } from "../lib/supabaseClient.js";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  UploadCloud,
   Clock,
   CheckCircle,
   XCircle,
@@ -240,8 +239,7 @@ const TanyaSoalPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h2 className="mb-6 text-3xl font-bold text-gray-800 flex items-center gap-2">
-        <UploadCloud className="text-blue-600" size={30} /> Tanya Soal
-        Matematika
+        Tanya Soal Matematika
       </h2>
 
       {/* Form Upload Soal */}

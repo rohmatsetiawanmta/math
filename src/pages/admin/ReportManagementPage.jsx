@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient.js";
 import toast from "react-hot-toast";
-import { AlertTriangle, CheckCircle, Clock, ExternalLink } from "lucide-react";
+import { CheckCircle, Clock, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 
 // Helper function to generate link path (adapted from existing UserDashboardPage logic)
@@ -147,8 +147,7 @@ const ReportManagementPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h2 className="mb-6 text-3xl font-bold text-gray-800 flex items-center gap-3">
-        <AlertTriangle className="text-red-500" size={30} /> Manajemen Laporan
-        Soal ({reports.length})
+        Manajemen Laporan Soal ({reports.length})
       </h2>
 
       <p className="mb-4 text-gray-600">Total Laporan: {reports.length}</p>

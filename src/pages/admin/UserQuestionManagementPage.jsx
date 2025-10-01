@@ -3,15 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient.js";
 import toast from "react-hot-toast";
-import {
-  UploadCloud,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  Edit,
-  Loader,
-} from "lucide-react";
+import { CheckCircle, XCircle, Clock, Eye, Edit, Loader } from "lucide-react";
 
 // Helper function to get status colors
 const getStatusDisplay = (status) => {
@@ -174,8 +166,7 @@ const UserQuestionManagementPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h2 className="mb-6 text-3xl font-bold text-gray-800 flex items-center gap-3">
-        <UploadCloud className="text-yellow-600" size={30} /> Manajemen
-        Pertanyaan User ({questions.length})
+        Manajemen Pertanyaan User ({questions.length})
       </h2>
 
       {/* Filter Buttons */}
