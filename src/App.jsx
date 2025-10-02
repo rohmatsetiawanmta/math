@@ -21,6 +21,11 @@ import ReportManagementPage from "./pages/admin/ReportManagementPage.jsx";
 import QuestionManagementPage from "./pages/admin/UserQuestionManagementPage.jsx";
 import TanyaSoalPage from "./pages/TanyaSoalPage.jsx";
 import UserQuestionManagementPage from "./pages/admin/UserQuestionManagementPage.jsx";
+import MateriCategoryPage from "./pages/MateriCategoryPage.jsx";
+import MateriTopicListPage from "./pages/MateriTopicListPage.jsx";
+import MateriSubtopicListPage from "./pages/MateriSubtopicListPage.jsx";
+import MateriDetailPage from "./pages/MateriDetailPage.jsx";
+import MateriListPage from "./pages/MateriListPage.jsx";
 
 const ProtectedRoute = ({ children, userRole, isLoading }) => {
   const navigate = useNavigate();
@@ -132,7 +137,22 @@ function App() {
           path="/latsol/:categoryId/:topicId/:subtopicId/:problemId"
           element={<ProblemDetailPage />}
         />
-        <Route path="/materi" element={<ComingSoon />} />
+
+        <Route path="/materi" element={<MateriCategoryPage />} />
+        <Route path="/materi/:categoryId" element={<MateriTopicListPage />} />
+        <Route
+          path="/materi/:categoryId/:topicId"
+          element={<MateriSubtopicListPage />}
+        />
+        <Route
+          path="/materi/:categoryId/:topicId/:subtopicId"
+          element={<MateriListPage />}
+        />
+        <Route
+          path="/materi/:categoryId/:topicId/:subtopicId/:materialId"
+          element={<MateriDetailPage />}
+        />
+
         <Route path="/drill-soal" element={<ComingSoon />} />
         <Route path="/tanya-soal" element={<TanyaSoalPage />} />
 
