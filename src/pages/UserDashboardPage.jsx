@@ -27,7 +27,7 @@ import {
   Cell,
 } from "recharts";
 
-// Logika perhitungan statistik (DIREVISI: untuk memasukkan breakdown)
+// Logika perhitungan statistik
 const calculateAndSetStats = (dataToCalculate, setUserStats) => {
   const totalDistinctAttempted = dataToCalculate.length;
   const solvedData = dataToCalculate.filter((item) => item.is_correct === true);
@@ -115,12 +115,54 @@ const calculateDailyStreak = (rawProgressData) => {
   return currentStreak;
 };
 
+// Konstan untuk singkatan hari Indonesia (M=Minggu, S=Senin, S=Selasa, R=Rabu, K=Kamis, J=Jumat, S=Sabtu)
+const INDO_DAY_ABBREVS = ["M", "S", "S", "R", "K", "J", "S"]; // Index 0 (Sun) to Index 6 (Sat)
+
+// FUNGSI BARU: Mendapatkan status pengerjaan soal (solved/not) untuk N hari terakhir
+const getRecentDailyStatus = (rawProgressData, N = 7) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // 1. Get unique successful dates (normalized to 00:00:00)
+  const solvedDates = new Set(
+    rawProgressData
+      .filter((p) => p.is_correct && p.updated_at)
+      .map((p) => {
+        const d = new Date(p.updated_at);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+      })
+  );
+
+  const statusList = [];
+
+  // 2. Iterate backward for N days (from N-1 days ago up to today (i=0))
+  for (let i = N - 1; i >= 0; i--) {
+    const checkDate = new Date(today);
+    checkDate.setDate(today.getDate() - i);
+    const timestamp = checkDate.getTime();
+    const dayIndex = checkDate.getDay(); // 0 (Sun) to 6 (Sat)
+
+    const solved = solvedDates.has(timestamp);
+
+    statusList.push({
+      date: checkDate.toISOString().split("T")[0],
+      dayLabel: i === 0 ? "Hari Ini" : i === 1 ? "Kemarin" : `${i} Hari Lalu`,
+      dayAbbrev: INDO_DAY_ABBREVS[dayIndex], // BARU
+      solved: solved,
+    });
+  }
+
+  return statusList;
+};
+
 const UserDashboardPage = () => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userStats, setUserStats] = useState(null);
 
-  const [dailyStreak, setDailyStreak] = useState(0); // <--- BARU
+  const [dailyStreak, setDailyStreak] = useState(0);
+  const [recentDailyStatus, setRecentDailyStatus] = useState([]); // <--- BARU
 
   // STATES UNTUK FILTER KATEGORI
   const [categoriesList, setCategoriesList] = useState([]);
@@ -275,6 +317,10 @@ const UserDashboardPage = () => {
         const streak = calculateDailyStreak(progressData);
         setDailyStreak(streak);
 
+        // Hitung Status Harian Terakhir (BARU untuk visualisasi)
+        const recentStatus = getRecentDailyStatus(progressData, 7);
+        setRecentDailyStatus(recentStatus);
+
         // 3. Hitung Statistik Awal (untuk 'all' categories)
         calculateAndSetStats(progressData, setUserStats);
 
@@ -321,7 +367,7 @@ const UserDashboardPage = () => {
     };
   }, [fetchInitialData, navigate]);
 
-  // Efek Pemfilteran Statistik (Tanpa fetch Soal Perlu Ditinjau)
+  // Efek Pemfilteran Statistik
   useEffect(() => {
     if (rawProgressData.length > 0) {
       let filteredProgress = rawProgressData;
@@ -337,7 +383,11 @@ const UserDashboardPage = () => {
       // A. Hitung Ulang Statistik
       calculateAndSetStats(filteredProgress, setUserStats);
 
-      // B. Logika Identifikasi Soal Perlu Ditinjau Dihapus
+      // B. Hitung Ulang Status Harian Terakhir (Karena rawProgressData juga di-trigger update)
+      const recentStatus = getRecentDailyStatus(rawProgressData, 7);
+      setRecentDailyStatus(recentStatus);
+
+      // C. Logika Identifikasi Soal Perlu Ditinjau Dihapus
     }
   }, [selectedCategoryId, rawProgressData]);
 
@@ -418,8 +468,8 @@ const UserDashboardPage = () => {
       </div>
       {/* END: FILTER KATEGORI */}
 
-      {/* START: Daily Streak Widget */}
-      {dailyStreak > 0 && (
+      {/* START: Daily Streak Widget (DIPERBARUI) */}
+      {(dailyStreak > 0 || recentDailyStatus.length > 0) && (
         <div className="mb-6 p-6 bg-yellow-50 rounded-xl shadow-lg border-l-4 border-yellow-500 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Flame size={32} className="text-yellow-600" />
@@ -430,6 +480,30 @@ const UserDashboardPage = () => {
               <p className="text-3xl font-bold text-yellow-800">
                 {dailyStreak} Hari Berturut-turut
               </p>
+
+              {/* VISUALISASI MINI CALENDAR BARU */}
+              {recentDailyStatus.length > 0 && (
+                <div className="flex gap-2 mt-3 pt-2 border-t border-yellow-200">
+                  {recentDailyStatus.map((day, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col items-center text-xs"
+                      title={`${day.dayAbbrev} (${day.dayLabel}): ${
+                        day.solved ? "Selesai" : "Terlewat"
+                      }`}
+                    >
+                      <span className="mb-1 font-semibold text-gray-600">
+                        {day.dayAbbrev}
+                      </span>
+                      <div
+                        className={`w-4 h-4 rounded-full shadow transition-all ${
+                          day.solved ? "bg-yellow-500" : "bg-gray-300"
+                        }`}
+                      ></div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <Link
