@@ -162,7 +162,7 @@ const UserDashboardPage = () => {
   const [userStats, setUserStats] = useState(null);
 
   const [dailyStreak, setDailyStreak] = useState(0);
-  const [recentDailyStatus, setRecentDailyStatus] = useState([]); // <--- BARU
+  const [recentDailyStatus, setRecentDailyStatus] = useState([]);
 
   // STATES UNTUK FILTER KATEGORI
   const [categoriesList, setCategoriesList] = useState([]);
@@ -452,21 +452,26 @@ const UserDashboardPage = () => {
         Dashboard
       </h2>
 
-      {/* START: FILTER KATEGORI */}
-      <div className="mb-4">
-        <select
-          value={selectedCategoryId}
-          onChange={(e) => setSelectedCategoryId(e.target.value)}
-          className="rounded-md border p-2 text-gray-800"
-        >
-          {categoriesList.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.category_name}
-            </option>
-          ))}
-        </select>
+      {/* START: FILTER KATEGORI (CHIPS BARU) */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {categoriesList.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => setSelectedCategoryId(category.id)}
+            className={`
+              rounded-full px-4 py-1 text-sm font-semibold transition-colors duration-200
+              ${
+                selectedCategoryId === category.id
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-gray-200 text-gray-700 hover:bg-blue-100 hover:text-blue-600"
+              }
+            `}
+          >
+            {category.category_name}
+          </button>
+        ))}
       </div>
-      {/* END: FILTER KATEGORI */}
+      {/* END: FILTER KATEGORI (CHIPS BARU) */}
 
       {/* START: Daily Streak Widget (DIPERBARUI) */}
       {(dailyStreak > 0 || recentDailyStatus.length > 0) && (
