@@ -1,7 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient.js";
 import toast from "react-hot-toast";
-import { CheckCircle, Clock, ExternalLink } from "lucide-react";
+import {
+  CheckCircle,
+  Clock,
+  ExternalLink,
+  AlertTriangle,
+  XCircle,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 // Helper function to generate link path (adapted from existing UserDashboardPage logic)
@@ -20,7 +26,8 @@ const ReportManagementPage = () => {
   // State untuk menyimpan map hierarki soal agar cepat membuat tautan
   const [problemHierarchyMap, setProblemHierarchyMap] = useState({});
 
-  const reportStatuses = ["open", "in_progress", "resolved"];
+  // PERUBAHAN 1: Menggunakan 'non_issue' sebagai status baru.
+  const reportStatuses = ["open", "in_progress", "resolved", "non_issue"];
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -116,14 +123,19 @@ const ReportManagementPage = () => {
     }
   };
 
+  // PERUBAHAN 2: Menggunakan 'non_issue' dalam logika ikon.
   const getStatusIcon = (status) => {
     switch (status) {
       case "resolved":
         return <CheckCircle size={16} className="text-green-500" />;
       case "in_progress":
         return <Clock size={16} className="text-blue-500" />;
+      case "non_issue":
+        // Menggunakan XCircle dengan warna abu-abu
+        return <XCircle size={16} className="text-gray-500" />;
       case "open":
       default:
+        // Menggunakan AlertTriangle untuk status open/default
         return <AlertTriangle size={16} className="text-red-500" />;
     }
   };
@@ -189,11 +201,14 @@ const ReportManagementPage = () => {
               return (
                 <tr
                   key={report.id}
+                  // PERUBAHAN 3: Menggunakan 'non_issue' dalam logika styling baris.
                   className={`${
                     report.report_status === "resolved"
                       ? "bg-green-50/50"
                       : report.report_status === "in_progress"
                       ? "bg-blue-50/50"
+                      : report.report_status === "non_issue"
+                      ? "bg-gray-100/50"
                       : ""
                   }`}
                 >
@@ -246,6 +261,8 @@ const ReportManagementPage = () => {
                           ? "bg-green-100 text-green-800"
                           : report.report_status === "in_progress"
                           ? "bg-blue-100 text-blue-800"
+                          : report.report_status === "non_issue" // PERUBAHAN 4: Menggunakan 'non_issue' dalam logika styling badge.
+                          ? "bg-gray-200 text-gray-800"
                           : "bg-red-100 text-red-800"
                       }`}
                     >
@@ -263,6 +280,7 @@ const ReportManagementPage = () => {
                     >
                       {reportStatuses.map((status) => (
                         <option key={status} value={status}>
+                          {/* Mengganti underscore dengan spasi untuk tampilan (misalnya 'non_issue' menjadi 'Non issue') */}
                           {status.charAt(0).toUpperCase() +
                             status.slice(1).replace("_", " ")}
                         </option>
