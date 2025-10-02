@@ -526,7 +526,7 @@ const UserDashboardPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Column 1: Soal Dijawab Benar (Total Solved) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
-            <p className="text-sm font-medium text-gray-500">
+            <p className="text-sm font-bold uppercase  text-gray-500">
               Soal Dijawab Benar
             </p>
             <p className="text-4xl font-bold text-gray-900 mt-1">
@@ -537,30 +537,9 @@ const UserDashboardPage = () => {
             </p>
           </div>
 
-          {/* Column 2: Benar dalam 1 Upaya (METRIK BARU) */}
-          <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-indigo-500">
-            <p className="text-sm font-medium text-gray-500">
-              Benar dalam 1 Upaya
-            </p>
-            <p className="text-4xl font-bold text-gray-900 mt-1">
-              {userStats.solvedOn1stAttempt}
-            </p>
-            {userStats.totalSolvedCorrectly > 0 && (
-              <p className="text-sm text-gray-500">
-                (
-                {(
-                  (userStats.solvedOn1stAttempt /
-                    userStats.totalSolvedCorrectly) *
-                  100
-                ).toFixed(1)}
-                % dari Total Benar)
-              </p>
-            )}
-          </div>
-
-          {/* Column 3: Akurasi Penguasaan (Overall Accuracy) */}
+          {/* Column 2: Akurasi Penguasaan (Overall Accuracy) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
-            <p className="text-sm font-medium text-gray-500">
+            <p className="text-sm font-bold uppercase  text-gray-500">
               Akurasi Penguasaan
             </p>
             <p className="text-4xl font-bold text-blue-600 mt-1">
@@ -569,9 +548,40 @@ const UserDashboardPage = () => {
             <p className="text-sm text-gray-500">Rasio Benar/Total Soal Unik</p>
           </div>
 
+          {/* Column 3: Benar dalam 1 Upaya (METRIK BARU) */}
+          <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-indigo-500">
+            <p className="text-sm font-bold uppercase  text-gray-500">
+              Benar dalam 1 Upaya
+            </p>
+            <p className="text-4xl font-bold text-gray-900 mt-1">
+              {/* Tampilkan Persentase sebagai angka besar */}
+              {userStats.totalSolvedCorrectly > 0 ? (
+                <>
+                  {(
+                    (userStats.solvedOn1stAttempt /
+                      userStats.totalSolvedCorrectly) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </>
+              ) : (
+                "0%"
+              )}
+            </p>
+            {userStats.totalSolvedCorrectly > 0 && (
+              <p className="text-sm text-gray-500">
+                {/* Tampilkan Kuantitas sebagai teks kecil */}(
+                {userStats.solvedOn1stAttempt} dari{" "}
+                {userStats.totalSolvedCorrectly} Soal Benar)
+              </p>
+            )}
+          </div>
+
           {/* Column 4: Rata-rata Upaya (Average Attempts) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-yellow-500">
-            <p className="text-sm font-medium text-gray-500">Rata-rata Upaya</p>
+            <p className="text-sm font-bold uppercase  text-gray-500">
+              Rata-rata Upaya
+            </p>
             <p className="text-4xl font-bold text-gray-900 mt-1">
               {userStats.avgAttemptsPerSolved}
             </p>
