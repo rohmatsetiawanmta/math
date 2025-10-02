@@ -28,7 +28,7 @@ import {
 } from "recharts";
 
 // Logika perhitungan statistik
-const calculateAndSetStats = (dataToCalculate, setUserStats) => {
+const calculateAndSetStats = (dataToCalculate, setUserStats, xpTotal = 0) => {
   const totalDistinctAttempted = dataToCalculate.length;
   const solvedData = dataToCalculate.filter((item) => item.is_correct === true);
   const totalSolvedCorrectly = solvedData.length;
@@ -73,6 +73,7 @@ const calculateAndSetStats = (dataToCalculate, setUserStats) => {
     solvedOn2ndAttempt,
     solvedOn3rdAttempt,
     solvedOn4thPlusAttempt,
+    xpTotal, // BARU: Menambahkan xpTotal
   });
 };
 
@@ -313,6 +314,17 @@ const UserDashboardPage = () => {
 
         setRawProgressData(progressData); // Simpan data mentah
 
+        // 2b. Fetch User XP (BARU)
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("xp_total")
+          .eq("id", userId)
+          .single();
+
+        if (userError)
+          console.error("Error fetching user data (XP):", userError);
+        const xpTotal = userData?.xp_total || 0; // Get XP total
+
         // Hitung Streak (BARU)
         const streak = calculateDailyStreak(progressData);
         setDailyStreak(streak);
@@ -322,7 +334,7 @@ const UserDashboardPage = () => {
         setRecentDailyStatus(recentStatus);
 
         // 3. Hitung Statistik Awal (untuk 'all' categories)
-        calculateAndSetStats(progressData, setUserStats);
+        calculateAndSetStats(progressData, setUserStats, xpTotal); // Pass xpTotal
 
         // 4. Panggil fetch status pertanyaan
         fetchQuestionStatusSummary(userId);
@@ -381,7 +393,9 @@ const UserDashboardPage = () => {
       }
 
       // A. Hitung Ulang Statistik
-      calculateAndSetStats(filteredProgress, setUserStats);
+      // Mempertahankan XP total yang sudah diambil
+      const currentXP = userStats?.xpTotal || 0;
+      calculateAndSetStats(filteredProgress, setUserStats, currentXP);
 
       // B. Hitung Ulang Status Harian Terakhir (Karena rawProgressData juga di-trigger update)
       const recentStatus = getRecentDailyStatus(rawProgressData, 7);
@@ -389,7 +403,7 @@ const UserDashboardPage = () => {
 
       // C. Logika Identifikasi Soal Perlu Ditinjau Dihapus
     }
-  }, [selectedCategoryId, rawProgressData]);
+  }, [selectedCategoryId, rawProgressData, userStats?.xpTotal]); // Menambahkan userStats?.xpTotal sebagai dependency
 
   if (loading || !session) {
     return (
@@ -452,6 +466,73 @@ const UserDashboardPage = () => {
         Dashboard
       </h2>
 
+      {/* START: Daily Streak Widget & XP Widget (3:1 Layout) */}
+      <div className="mb-6 flex flex-col md:flex-row gap-6">
+        {(dailyStreak > 0 || recentDailyStatus.length > 0) && (
+          /* STREAK WIDGET: Mengambil 3/4 lebar */
+          <div className="w-full md:w-3/4 p-6 bg-yellow-50 rounded-xl shadow-lg border-l-4 border-yellow-500 flex items-center justify-between">
+            {/* Streak Widget Content */}
+            <div className="flex items-center gap-4">
+              <Flame size={32} className="text-yellow-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">
+                  Streak Harian Anda
+                </p>
+                <p className="text-3xl font-bold text-yellow-800">
+                  {dailyStreak} Hari Berturut-turut
+                </p>
+
+                {/* VISUALISASI MINI CALENDAR BARU */}
+                {recentDailyStatus.length > 0 && (
+                  <div className="flex gap-2 mt-3 pt-2 border-t border-yellow-200">
+                    {recentDailyStatus.map((day, index) => (
+                      <div
+                        key={index}
+                        className="flex flex-col items-center text-xs"
+                        title={`${day.dayAbbrev} (${day.dayLabel}): ${
+                          day.solved ? "Selesai" : "Terlewat"
+                        }`}
+                      >
+                        <span className="mb-1 font-semibold text-gray-600">
+                          {day.dayAbbrev}
+                        </span>
+                        <div
+                          className={`w-4 h-4 rounded-full shadow transition-all ${
+                            day.solved ? "bg-yellow-500" : "bg-gray-300"
+                          }`}
+                        ></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Link
+              to="/latsol"
+              className="rounded-md bg-yellow-600 px-4 py-2 text-white text-sm font-semibold hover:bg-yellow-700"
+            >
+              Lanjut Latihan
+            </Link>
+          </div>
+        )}
+
+        {/* XP WIDGET: Mengambil 1/4 lebar (dipindahkan dari grid bawah) */}
+        {userStats && (
+          <div className="w-full md:w-1/4 bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
+            <p className="text-sm font-medium text-gray-500">
+              Total Experience (XP)
+            </p>
+            <p className="text-4xl font-bold text-gray-900 mt-1">
+              {userStats.xpTotal || 0}
+            </p>
+            <p className="text-sm text-gray-500">
+              Dapatkan XP dari soal benar.
+            </p>
+          </div>
+        )}
+      </div>
+      {/* END: Daily Streak Widget & XP Widget */}
+
       {/* START: FILTER KATEGORI (CHIPS BARU) */}
       <div className="mb-4 flex flex-wrap gap-2">
         {categoriesList.map((category) => (
@@ -473,60 +554,12 @@ const UserDashboardPage = () => {
       </div>
       {/* END: FILTER KATEGORI (CHIPS BARU) */}
 
-      {/* START: Daily Streak Widget (DIPERBARUI) */}
-      {(dailyStreak > 0 || recentDailyStatus.length > 0) && (
-        <div className="mb-6 p-6 bg-yellow-50 rounded-xl shadow-lg border-l-4 border-yellow-500 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Flame size={32} className="text-yellow-600" />
-            <div>
-              <p className="text-sm font-medium text-gray-700">
-                Streak Harian Anda
-              </p>
-              <p className="text-3xl font-bold text-yellow-800">
-                {dailyStreak} Hari Berturut-turut
-              </p>
-
-              {/* VISUALISASI MINI CALENDAR BARU */}
-              {recentDailyStatus.length > 0 && (
-                <div className="flex gap-2 mt-3 pt-2 border-t border-yellow-200">
-                  {recentDailyStatus.map((day, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col items-center text-xs"
-                      title={`${day.dayAbbrev} (${day.dayLabel}): ${
-                        day.solved ? "Selesai" : "Terlewat"
-                      }`}
-                    >
-                      <span className="mb-1 font-semibold text-gray-600">
-                        {day.dayAbbrev}
-                      </span>
-                      <div
-                        className={`w-4 h-4 rounded-full shadow transition-all ${
-                          day.solved ? "bg-yellow-500" : "bg-gray-300"
-                        }`}
-                      ></div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <Link
-            to="/latsol"
-            className="rounded-md bg-yellow-600 px-4 py-2 text-white text-sm font-semibold hover:bg-yellow-700"
-          >
-            Lanjut Latihan
-          </Link>
-        </div>
-      )}
-      {/* END: Daily Streak Widget */}
-
-      {/* Widget A: Statistik Kunci (4 Kolom) */}
+      {/* Widget A: Statistik Kunci (Kembali ke 4 Kolom) */}
       {userStats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Column 1: Soal Dijawab Benar (Total Solved) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
-            <p className="text-sm font-bold uppercase  text-gray-500">
+            <p className="text-sm font-medium text-gray-500">
               Soal Dijawab Benar
             </p>
             <p className="text-4xl font-bold text-gray-900 mt-1">
@@ -539,22 +572,23 @@ const UserDashboardPage = () => {
 
           {/* Column 2: Akurasi Penguasaan (Overall Accuracy) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
-            <p className="text-sm font-bold uppercase  text-gray-500">
+            <p className="text-sm font-medium text-gray-500">
               Akurasi Penguasaan
             </p>
             <p className="text-4xl font-bold text-blue-600 mt-1">
               {userStats.accuracy}%
             </p>
-            <p className="text-sm text-gray-500">Rasio Benar/Total Soal Unik</p>
+            <p className="text-sm text-gray-500">
+              Rasio Benar dibagi Banyak Soal Unik
+            </p>
           </div>
 
-          {/* Column 3: Benar dalam 1 Upaya (METRIK BARU) */}
+          {/* Column 3: Benar dalam 1 Upaya (SWAPPED UI) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-indigo-500">
-            <p className="text-sm font-bold uppercase  text-gray-500">
+            <p className="text-sm font-medium text-gray-500">
               Benar dalam 1 Upaya
             </p>
             <p className="text-4xl font-bold text-gray-900 mt-1">
-              {/* Tampilkan Persentase sebagai angka besar */}
               {userStats.totalSolvedCorrectly > 0 ? (
                 <>
                   {(
@@ -570,8 +604,7 @@ const UserDashboardPage = () => {
             </p>
             {userStats.totalSolvedCorrectly > 0 && (
               <p className="text-sm text-gray-500">
-                {/* Tampilkan Kuantitas sebagai teks kecil */}(
-                {userStats.solvedOn1stAttempt} dari{" "}
+                ({userStats.solvedOn1stAttempt} dari{" "}
                 {userStats.totalSolvedCorrectly} Soal Benar)
               </p>
             )}
@@ -579,9 +612,7 @@ const UserDashboardPage = () => {
 
           {/* Column 4: Rata-rata Upaya (Average Attempts) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-yellow-500">
-            <p className="text-sm font-bold uppercase  text-gray-500">
-              Rata-rata Upaya
-            </p>
+            <p className="text-sm font-medium text-gray-500">Rata-rata Upaya</p>
             <p className="text-4xl font-bold text-gray-900 mt-1">
               {userStats.avgAttemptsPerSolved}
             </p>
@@ -592,6 +623,7 @@ const UserDashboardPage = () => {
           </div>
         </div>
       )}
+      {/* END: Widget A: Statistik Kunci */}
 
       {/* START: Statistik Efisiensi Penguasaan (Bar Chart) */}
       {userStats && userStats.totalSolvedCorrectly > 0 && (

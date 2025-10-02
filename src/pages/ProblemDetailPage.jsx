@@ -340,7 +340,7 @@ const ProblemDetailPage = () => {
   }, [problem]); // Dependensi problem penting agar dipanggil setelah data soal dimuat
 
   const handleBackToProblems = () => {
-    navigate(`/latsol/${categoryId}/${topicId}/${subtopicId}`);
+    navigate(`/latsol/${categoryId}/${topicId}`);
   };
 
   // FUNGSI BARU: untuk toggle bookmark
@@ -425,9 +425,25 @@ const ProblemDetailPage = () => {
       isCorrect = userAnswers.toLowerCase() === problem.answer.toLowerCase();
     }
 
-    // 3. LOGIKA: Menyimpan Progress
+    // 3. LOGIKA: Menyimpan Progress & Memberi XP
     let newAttemptsCount = (userProgress?.attempts_count || 0) + 1;
     let newIsCorrect = isCorrect;
+
+    // --- XP Calculation Logic (New Logic) ---
+    const BASE_XP = 10;
+    let bonusXP = 0;
+    const currentAttempt = newAttemptsCount; // Upaya ke-N (1, 2, 3, ...)
+
+    if (currentAttempt === 1) {
+      bonusXP = 10;
+    } else if (currentAttempt === 2) {
+      bonusXP = 5;
+    } else if (currentAttempt === 3) {
+      bonusXP = 2;
+    }
+    const XP_AWARD = BASE_XP + bonusXP;
+    // --- End XP Calculation Logic ---
+    const wasAlreadyCorrect = userProgress?.is_correct; // Status progres sebelum cek
 
     if (session) {
       const { error: progressError } = await supabase
@@ -458,7 +474,42 @@ const ProblemDetailPage = () => {
 
         // Tampilkan toast hanya jika BENAR
         if (newIsCorrect) {
-          toast.success(`Jawaban Benar!`);
+          if (newIsCorrect && !wasAlreadyCorrect) {
+            // Award XP only on the first correct solve
+
+            // 1. Fetch current XP
+            const { data: userData, error: userError } = await supabase
+              .from("users")
+              .select("xp_total")
+              .eq("id", session.user.id)
+              .single();
+
+            if (!userError && userData) {
+              const currentXP = userData.xp_total || 0;
+              const newXP = currentXP + XP_AWARD;
+
+              // 2. Update XP in 'users' table
+              const { error: xpUpdateError } = await supabase
+                .from("users")
+                .update({ xp_total: newXP })
+                .eq("id", session.user.id);
+
+              if (xpUpdateError) {
+                console.error("Error updating user XP:", xpUpdateError);
+                toast.error("Gagal menyimpan XP.");
+              } else {
+                toast.success(`Jawaban Benar! +${XP_AWARD} XP!`);
+              }
+            } else {
+              console.error(
+                "Error fetching user data to update XP:",
+                userError
+              );
+              toast.success(`Jawaban Benar! (Gagal memberi XP)`);
+            }
+          } else {
+            toast.success(`Jawaban Benar!`);
+          }
         }
       }
     } else if (isCorrect) {

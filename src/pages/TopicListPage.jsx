@@ -32,7 +32,6 @@ const TopicListPage = () => {
         if (error) throw error;
         if (!data) throw new Error("Kategori tidak ditemukan!");
 
-        console.log("Fetched data:", data);
         setCategoryName(data.category_name);
         setTopics(data.topics);
       } catch (error) {
