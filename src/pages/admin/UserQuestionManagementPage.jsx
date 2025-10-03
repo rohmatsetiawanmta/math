@@ -29,11 +29,21 @@ const getStatusDisplay = (status) => {
   }
 };
 
+// [BARU]: Helper function to generate the public problem link path
+const generateProblemLinkPath = (problemId, hierarchyMap) => {
+  const hier = hierarchyMap[problemId];
+  // Memeriksa keberadaan semua bagian hierarki yang diperlukan
+  if (!hier || !hier.category_id || !hier.topic_id || !hier.subtopic_id)
+    return null;
+  // Menggunakan base path '/math' yang didefinisikan di vite.config.js
+  return `/math/latsol/${hier.category_id}/${hier.topic_id}/${hier.subtopic_id}/${problemId}`;
+};
+
 const UserQuestionManagementPage = () => {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("all"); // <-- Diubah default ke "all"
+  const [filter, setFilter] = useState("all");
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,30 +53,73 @@ const UserQuestionManagementPage = () => {
   const [formProblemId, setFormProblemId] = useState("");
   const [formSimpleAnswer, setFormSimpleAnswer] = useState("");
 
+  // [BARU]: State untuk menyimpan map hierarki soal
+  const [problemHierarchyMap, setProblemHierarchyMap] = useState({});
+
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      let query = supabase // Menggunakan variabel query
-        .from("user_questions")
-        .select(
-          `
+      let query = supabase.from("user_questions").select(
+        `
             id, user_id, user_question_id, image_url, status, admin_reason, problem_id, simple_answer, created_at,
             users(email)
         `
-        );
+      );
 
-      // Filter bersyarat: hanya terapkan filter jika bukan "all"
       if (filter !== "all") {
         query = query.eq("status", filter);
       }
 
-      const { data, error } = await query.order("created_at", {
+      const { data: qData, error: qError } = await query.order("created_at", {
         ascending: true,
       });
 
-      if (error) throw error;
-      setQuestions(data);
+      if (qError) throw qError;
+      setQuestions(qData);
+
+      // --- [BARU]: Logic Fetch Hierarki ---
+      const resolvedProblemIds = qData
+        .filter((q) => q.status === "resolved" && q.problem_id)
+        .map((q) => q.problem_id);
+
+      if (resolvedProblemIds.length > 0) {
+        // Mengambil data hierarki lengkap dari tabel problems
+        const { data: pData, error: pError } = await supabase
+          .from("problems")
+          .select(
+            `
+                problem_id,
+                subtopic:subtopic_id(
+                    subtopic_id,
+                    topic:topic_id(
+                        topic_id,
+                        category:category_id(
+                            category_id
+                        )
+                    )
+                )
+            `
+          )
+          .in("problem_id", resolvedProblemIds);
+
+        if (pError) console.error("Error fetching hierarchy:", pError);
+
+        const map = {};
+        (pData || []).forEach((p) => {
+          if (p.subtopic?.topic?.category) {
+            map[p.problem_id] = {
+              category_id: p.subtopic.topic.category.category_id,
+              topic_id: p.subtopic.topic.topic_id,
+              subtopic_id: p.subtopic.subtopic_id,
+            };
+          }
+        });
+        setProblemHierarchyMap(map);
+      } else {
+        setProblemHierarchyMap({});
+      }
+      // -----------------------------------
     } catch (e) {
       console.error("Error fetching questions:", e);
       setError(e.message);
@@ -137,14 +190,7 @@ const UserQuestionManagementPage = () => {
     setFormStatus(newStatus);
   };
 
-  const getProblemLink = (problemId) => {
-    if (!problemId || problemId.length !== 11 || !problemId.startsWith("PR-"))
-      return null;
-    // Note: Link ini bersifat parsial dan hanya memuat problemId.
-    // Full link memerlukan fetch hierarki (Category, Topic, Subtopic ID)
-    // Untuk saat ini, kita gunakan placeholder link yang unik.
-    return `/math/latsol/PR-${problemId.substring(3, 11)}`;
-  };
+  // FUNGSI getProblemLink ASLI DIHAPUS karena diganti generateProblemLinkPath
 
   if (loading) {
     return (
@@ -350,6 +396,20 @@ const UserQuestionManagementPage = () => {
                       placeholder="Contoh: PR-A1B2C3D4"
                       required
                     />
+                    {/* [MODIFIKASI]: Menampilkan tautan langsung ke soal publik */}
+                    {formProblemId && problemHierarchyMap[formProblemId] && (
+                      <a
+                        href={generateProblemLinkPath(
+                          formProblemId,
+                          problemHierarchyMap
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline mt-1"
+                      >
+                        Lihat Soal Publik (Deep Link)
+                      </a>
+                    )}
                   </div>
                   <div className="flex flex-col">
                     <label className="mb-1 text-sm font-bold text-gray-700">
