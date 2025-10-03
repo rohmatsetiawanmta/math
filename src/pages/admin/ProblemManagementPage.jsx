@@ -1,20 +1,11 @@
+// src/pages/admin/ProblemManagementPage.jsx
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient.js";
 import toast from "react-hot-toast";
 import MathRenderer from "../../components/MathRenderer.jsx";
 import ImageUploaderModal from "../../components/ImageUploaderModal.jsx";
-import {
-  Edit,
-  Trash2,
-  Plus,
-  X,
-  Copy,
-  List,
-  ListOrdered,
-  ImagePlus,
-  ArrowUp,
-  ArrowDown,
-} from "lucide-react";
+import TextEditor from "../../components/TextEditor.jsx"; // [MODIFIKASI] Import TextEditor
+import { Edit, Trash2, Plus, X, Copy, ArrowUp, ArrowDown } from "lucide-react";
 import formatTextForHTML from "../../util/formatTextForHTML.js";
 
 const ProblemManagementPage = () => {
@@ -435,7 +426,7 @@ const ProblemManagementPage = () => {
     setForm(updatedForm);
   };
 
-  // FUNGSI HANDLE UNTUK TOMBOL P-Q (Tabel Kuantitas) - DIMODIFIKASI
+  // FUNGSI HANDLE UNTUK TOMBOL P-Q (Tabel Kuantitas)
   const handleInsertTable = () => {
     // 1. Teks Intro Standar P-Q (Markdown/MathJax supported)
     const pqIntroText =
@@ -456,7 +447,8 @@ const ProblemManagementPage = () => {
       },
     ];
 
-    const newQuestionText = pqIntroText + tableHTML;
+    const newQuestionText =
+      (form.question_text || "") + pqIntroText + tableHTML;
 
     setForm({
       ...form,
@@ -505,10 +497,12 @@ const ProblemManagementPage = () => {
       "1. [Tulis Pernyataan 1 di sini]\n" +
       "2. [Tulis Pernyataan 2 di sini]";
 
+    const newQuestionText = (form.question_text || "") + dsQuestionText;
+
     setForm({
       ...form,
       type: "mcq", // Set tipe soal menjadi MCQ
-      question_text: dsQuestionText, // Set teks soal dengan template DS
+      question_text: newQuestionText, // Set teks soal dengan template DS
       options: dsOptions, // Set 5 opsi standar
       answer: "", // Reset kunci jawaban
       tag: (form.tag ? form.tag + ", " : "") + "DS", // Tambahkan tag DS
@@ -516,45 +510,7 @@ const ProblemManagementPage = () => {
   };
   // AKHIR FUNGSI BARU DS
 
-  const handleInsertBold = () => {
-    setForm({
-      ...form,
-      question_text: (form.question_text || "") + "**teks**",
-    });
-  };
-
-  const handleInsertItalic = () => {
-    setForm({
-      ...form,
-      question_text: (form.question_text || "") + "*teks*",
-    });
-  };
-
-  const handleInsertUnderline = () => {
-    const formattedText = "<u>teks</u>";
-    setForm({
-      ...form,
-      question_text: (form.question_text || "") + formattedText,
-    });
-  };
-
-  const handleInsertBulletList = () => {
-    const bulletListHTML =
-      '<ul style="list-style-type: disc; margin-left:1em"><li>...</li><li>...</li></ul>';
-    setForm({
-      ...form,
-      question_text: (form.question_text || "") + bulletListHTML,
-    });
-  };
-
-  const handleInsertNumberedList = () => {
-    const numberedListHTML =
-      '<ol style="list-style-type: roman; margin-left:1em"><li>...</li><li>...</li></ol>';
-    setForm({
-      ...form,
-      question_text: (form.question_text || "") + numberedListHTML,
-    });
-  };
+  // NOTE: Fungsi-fungsi handleInsertBold, handleInsertItalic, dll. DIHAPUS karena sudah dipindahkan ke TextEditor.jsx.
 
   const handleOptionChange = (index, value) => {
     const newOptions = [...form.options];
@@ -1164,74 +1120,16 @@ const ProblemManagementPage = () => {
                   <label className="mb-2 block text-sm font-bold text-gray-700">
                     Teks Soal
                   </label>
-                  <textarea
+                  <TextEditor
                     name="question_text"
-                    value={form.question_text || ""}
+                    value={form.question_text}
                     onChange={handleChange}
-                    className="w-full rounded-md border p-2 focus:border-blue-500 focus:outline-none"
+                    onInsertImage={() => setIsImageModalOpen(true)}
+                    onInsertTable={handleInsertTable}
+                    onInsertDS={handleInsertDS}
                     rows="10"
-                    required
+                    placeholder="Tulis teks soal di sini. Gunakan $...$ untuk notasi matematika."
                   />
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsImageModalOpen(true)}
-                      className="rounded-md bg-gray-200 p-2 text-gray-700 hover:bg-gray-300"
-                      aria-label="Unggah Gambar"
-                    >
-                      <ImagePlus size={20} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleInsertTable}
-                      className="rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 text-sm"
-                    >
-                      P-Q
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleInsertDS}
-                      className="rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 text-sm font-semibold"
-                      title="Insert Data Sufficiency Template"
-                    >
-                      DS
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleInsertBold}
-                      className="font-serif rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 text-sm font-bold"
-                    >
-                      B
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleInsertItalic}
-                      className="font-serif rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 text-sm italic"
-                    >
-                      I
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleInsertUnderline}
-                      className="font-serif rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 text-sm underline"
-                    >
-                      U
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleInsertBulletList}
-                      className="rounded-md bg-gray-200 px-2 py-2 text-gray-700 hover:bg-gray-300"
-                    >
-                      <List size={20} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleInsertNumberedList}
-                      className="rounded-md bg-gray-200 px-2 py-2 text-gray-700 hover:bg-gray-300"
-                    >
-                      <ListOrdered size={20} />
-                    </button>
-                  </div>
                 </div>
                 <div className="flex-1">
                   <label className="mb-2 block text-sm font-bold text-gray-700">
@@ -1426,24 +1324,14 @@ const ProblemManagementPage = () => {
                     <label className="mb-2 block text-sm font-bold text-gray-700">
                       Teks Jawaban
                     </label>
-                    <textarea
+                    <TextEditor
                       name="answer"
-                      value={form.answer || ""}
+                      value={form.answer}
                       onChange={handleChange}
-                      className="w-full rounded-md border p-2 focus:border-blue-500 focus:outline-none"
+                      onInsertImage={() => setIsImageModalOpen(true)}
                       rows="10"
-                      required
+                      placeholder="Tulis jawaban pasti di sini. Gunakan $...$ untuk notasi matematika."
                     />
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsImageModalOpen(true)}
-                        className="rounded-md bg-gray-200 p-2 text-gray-700 hover:bg-gray-300"
-                        aria-label="Unggah Gambar"
-                      >
-                        <ImagePlus size={20} />
-                      </button>
-                    </div>
                   </div>
                   <div className="flex-1">
                     <label className="mb-2 block text-sm font-bold text-gray-700">
@@ -1466,24 +1354,14 @@ const ProblemManagementPage = () => {
                       nomor urut Teori Penting yang dipilih.
                     </p>
                   </label>
-                  <textarea
+                  <TextEditor
                     name="solution_text"
-                    value={form.solution_text || ""}
+                    value={form.solution_text}
                     onChange={handleChange}
-                    className="w-full rounded-md border p-2 focus:border-blue-500 focus:outline-none"
+                    onInsertImage={() => setIsImageModalOpen(true)}
                     rows="10"
-                    required
+                    placeholder="Tulis pembahasan di sini. Gunakan $...$ untuk notasi matematika."
                   />
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsImageModalOpen(true)}
-                      className="rounded-md bg-gray-200 p-2 text-gray-700 hover:bg-gray-300"
-                      aria-label="Unggah Gambar"
-                    >
-                      <ImagePlus size={20} />
-                    </button>
-                  </div>
                 </div>
                 <div className="flex-1">
                   <label className="mb-2 block text-sm font-bold text-gray-700">
