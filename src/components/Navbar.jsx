@@ -8,8 +8,8 @@ import LogoImg from "../image/logo.png";
 
 const navItems = [
   { name: "Latihan Soal", to: "/latsol" },
-  { name: "Materi", to: "/materi" },
-  { name: "Drill Soal", to: "/drill-soal" },
+  // { name: "Materi", to: "/materi" },
+  // { name: "Drill Soal", to: "/drill-soal" },
   { name: "Tanya Soal", to: "/tanya-soal" },
 ];
 
