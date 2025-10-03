@@ -127,6 +127,8 @@ const ProblemDetailPage = () => {
   const { categoryId, topicId, subtopicId, problemId } = useParams();
   const navigate = useNavigate();
 
+  // ... (fetchUserProgress, fetchBookmarkStatus, handleReportProblem, fetchProblem TIDAK BERUBAH)
+
   // Fungsi untuk memuat progres pengguna
   const fetchUserProgress = async (currentSession, currentProblemId) => {
     if (!currentSession || !currentProblemId) return;
@@ -282,7 +284,7 @@ const ProblemDetailPage = () => {
     fetchProblem();
   }, [problemId]);
 
-  // Efek untuk mengisi userAnswers dengan jawaban yang benar jika sudah solved (Req 2)
+  // ... (useEffect untuk mengisi userAnswers TIDAK BERUBAH)
   useEffect(() => {
     if (problem) {
       if (problem.type === "input" || problem.type === "mcq") {
@@ -315,7 +317,7 @@ const ProblemDetailPage = () => {
     }
   }, [problem, userProgress, isCorrectLocally]);
 
-  // UPDATE: Panggil fetch bookmark di sini
+  // ... (useEffect untuk session dan authListener TIDAK BERUBAH)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -429,20 +431,44 @@ const ProblemDetailPage = () => {
     let newAttemptsCount = (userProgress?.attempts_count || 0) + 1;
     let newIsCorrect = isCorrect;
 
-    // --- XP Calculation Logic (New Logic) ---
-    const BASE_XP = 10;
-    let bonusXP = 0;
+    // --- XP Calculation Logic (MODIFIED) ---
     const currentAttempt = newAttemptsCount; // Upaya ke-N (1, 2, 3, ...)
 
-    if (currentAttempt === 1) {
-      bonusXP = 10;
-    } else if (currentAttempt === 2) {
-      bonusXP = 5;
-    } else if (currentAttempt === 3) {
-      bonusXP = 2;
+    // 1. Calculate Base Score
+    let baseScore;
+    const numOptions = problem.options
+      ? Object.keys(problem.options).length
+      : 0;
+    const problemType = problem.type;
+
+    if (problemType === "mcq") {
+      baseScore = 10;
+    } else if (problemType === "input") {
+      baseScore = 20;
+    } else if (problemType === "mcma") {
+      baseScore = 4 * numOptions;
+    } else if (problemType === "mck") {
+      baseScore = 5 * numOptions;
+    } else {
+      baseScore = 10; // Default fallback
     }
-    const XP_AWARD = BASE_XP + bonusXP;
+
+    // 2. Calculate Bonus Multiplier
+    let multiplier;
+    if (currentAttempt === 1) {
+      multiplier = 2.0;
+    } else if (currentAttempt === 2) {
+      multiplier = 1.5;
+    } else if (currentAttempt === 3) {
+      multiplier = 1.25;
+    } else {
+      multiplier = 1.0;
+    }
+
+    // 3. Calculate Final XP Award (Rounded down)
+    const XP_AWARD = Math.floor(baseScore * multiplier);
     // --- End XP Calculation Logic ---
+
     const wasAlreadyCorrect = userProgress?.is_correct; // Status progres sebelum cek
 
     if (session) {

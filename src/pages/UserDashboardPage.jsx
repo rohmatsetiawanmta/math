@@ -469,8 +469,8 @@ const UserDashboardPage = () => {
       {/* START: Daily Streak Widget & XP Widget (3:1 Layout) */}
       <div className="mb-6 flex flex-col md:flex-row gap-6">
         {(dailyStreak > 0 || recentDailyStatus.length > 0) && (
-          /* STREAK WIDGET: Mengambil 3/4 lebar */
-          <div className="w-full md:w-3/4 p-6 bg-yellow-50 rounded-xl shadow-lg border-l-4 border-yellow-500 flex items-center justify-between">
+          /* STREAK WIDGET: Mengambil 2/3 lebar */
+          <div className="w-full md:w-2/3 p-6 bg-yellow-50 rounded-xl shadow-lg border-l-4 border-yellow-500 flex items-center justify-between">
             {/* Streak Widget Content */}
             <div className="flex items-center gap-4">
               <Flame size={32} className="text-yellow-600" />
@@ -516,9 +516,9 @@ const UserDashboardPage = () => {
           </div>
         )}
 
-        {/* XP WIDGET: Mengambil 1/4 lebar (dipindahkan dari grid bawah) */}
+        {/* XP WIDGET: Mengambil 1/3 lebar (dipindahkan dari grid bawah) */}
         {userStats && (
-          <div className="w-full md:w-1/4 bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
+          <div className="w-full md:w-1/3 bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
             <p className="text-sm font-medium text-gray-500">
               Total Experience (XP)
             </p>
@@ -556,7 +556,7 @@ const UserDashboardPage = () => {
 
       {/* Widget A: Statistik Kunci (Kembali ke 4 Kolom) */}
       {userStats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Column 1: Soal Dijawab Benar (Total Solved) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
             <p className="text-sm font-medium text-gray-500">
@@ -568,22 +568,10 @@ const UserDashboardPage = () => {
             <p className="text-sm text-gray-500">
               dari {userStats.totalDistinctAttempted} soal unik dicoba
             </p>
+            <p className="text-sm font-bold">({userStats.accuracy}%)</p>
           </div>
 
-          {/* Column 2: Akurasi Penguasaan (Overall Accuracy) */}
-          <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
-            <p className="text-sm font-medium text-gray-500">
-              Akurasi Penguasaan
-            </p>
-            <p className="text-4xl font-bold text-blue-600 mt-1">
-              {userStats.accuracy}%
-            </p>
-            <p className="text-sm text-gray-500">
-              Rasio Benar dibagi Banyak Soal Unik
-            </p>
-          </div>
-
-          {/* Column 3: Benar dalam 1 Upaya (SWAPPED UI) */}
+          {/* Column 2: Benar dalam 1 Upaya (SWAPPED UI) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-indigo-500">
             <p className="text-sm font-medium text-gray-500">
               Benar dalam 1 Upaya
@@ -595,7 +583,7 @@ const UserDashboardPage = () => {
                     (userStats.solvedOn1stAttempt /
                       userStats.totalSolvedCorrectly) *
                     100
-                  ).toFixed(1)}
+                  ).toFixed(2)}
                   %
                 </>
               ) : (
@@ -610,7 +598,7 @@ const UserDashboardPage = () => {
             )}
           </div>
 
-          {/* Column 4: Rata-rata Upaya (Average Attempts) */}
+          {/* Column 3: Rata-rata Upaya (Average Attempts) */}
           <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-yellow-500">
             <p className="text-sm font-medium text-gray-500">Rata-rata Upaya</p>
             <p className="text-4xl font-bold text-gray-900 mt-1">
