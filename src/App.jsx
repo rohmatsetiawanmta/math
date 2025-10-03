@@ -138,7 +138,8 @@ function App() {
           element={<ProblemDetailPage />}
         />
 
-        <Route path="/materi" element={<MateriCategoryPage />} />
+        <Route path="/materi" element={<ComingSoon />} />
+        {/* <Route path="/materi" element={<MateriCategoryPage />} />
         <Route path="/materi/:categoryId" element={<MateriTopicListPage />} />
         <Route
           path="/materi/:categoryId/:topicId"
@@ -151,7 +152,7 @@ function App() {
         <Route
           path="/materi/:categoryId/:topicId/:subtopicId/:materialId"
           element={<MateriDetailPage />}
-        />
+        /> */}
 
         <Route path="/drill-soal" element={<ComingSoon />} />
         <Route path="/tanya-soal" element={<TanyaSoalPage />} />
