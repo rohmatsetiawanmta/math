@@ -493,6 +493,7 @@ const ProblemManagementPage = () => {
     // 2. Template Teks Soal
     const dsQuestionText =
       "**Pertanyaan:** [Tulis pertanyaan utama di sini]\n\n" +
+      "Putuskan apakah pernyataan (1) dan (2) berikut cukup untuk menjawab pertanyaan tersebut\n" +
       "**Pernyataan:**\n" +
       "1. [Tulis Pernyataan 1 di sini]\n" +
       "2. [Tulis Pernyataan 2 di sini]";
